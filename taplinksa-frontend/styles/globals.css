@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    direction: rtl;
+  }
+
+  body {
+    @apply font-cairo text-gray-800 bg-white dark:bg-dark dark:text-white;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-cairo font-bold;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+
+  .btn-primary {
+    @apply bg-gold text-dark px-6 py-3 rounded-lg font-bold transition-all duration-300 hover:bg-gold-dark hover:scale-105 hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply border-2 border-gold text-gold px-6 py-3 rounded-lg font-bold transition-all duration-300 hover:bg-gold hover:text-dark;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl;
+  }
+
+  .gradient-gold {
+    @apply bg-gradient-to-r from-gold-dark via-gold to-gold-light;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-gold-dark to-gold-light;
+  }
+
+  .section-padding {
+    @apply py-16 md:py-24;
+  }
+}
+
+/* AOS Override for RTL */
+[data-aos] {
+  pointer-events: none;
+}
+
+[data-aos].aos-animate {
+  pointer-events: auto;
+}
+
+/* WordPress Content Styles */
+.wp-content img {
+  @apply rounded-lg my-4;
+}
+
+.wp-content h2 {
+  @apply text-3xl font-bold mt-8 mb-4;
+}
+
+.wp-content h3 {
+  @apply text-2xl font-bold mt-6 mb-3;
+}
+
+.wp-content p {
+  @apply mb-4 leading-relaxed;
+}
+
+.wp-content ul, .wp-content ol {
+  @apply mr-6 mb-4;
+}
+
+.wp-content li {
+  @apply mb-2;
+}
+
+.wp-content blockquote {
+  @apply border-r-4 border-gold pr-4 my-4 italic text-gray-600;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gold rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gold-dark;
+}
+
+
+@keyframes gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 3s ease infinite;
+}
+
+
+/* 3D Perspective */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+/* تحسين الأنيميشن */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
