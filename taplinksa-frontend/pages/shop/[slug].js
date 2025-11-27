@@ -447,7 +447,7 @@ export default function ProductPage({ product, relatedProducts }) {
                 {relatedProducts.map((related) => (
                   <Link
                     key={related.id}
-                    href={`/product/${related.slug}`}
+                    href={`/shop/${related.slug}`}
                     className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all group"
                   >
                     <div className="relative aspect-square">
