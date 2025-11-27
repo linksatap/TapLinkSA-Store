@@ -95,7 +95,7 @@ export default function Header() {
             <span className="text-2xl font-bold">
               <span className="text-gold">متجر تاب لينك</span>
               <span className={scrolled || !isHomePage ? 'text-dark' : 'text-white'}>
-                {' '}SA
+                {' '}
               </span>
             </span>
           </Link>
