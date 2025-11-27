@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import Layout from '../components/layout/Layout';
 import { useCart } from '../context/CartContext';
-import { useUser } from '../context/UserContext'; // ✅ أضف هذا
+import { useUser } from '../context/UserContext';
+import CouponInput from '../components/CouponInput';
 
 export default function Checkout() {
   const router = useRouter();
   const { cart, getCartTotal, clearCart } = useCart();
-  const { user } = useUser(); // ✅ أضف هذا
+  const { user } = useUser();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,7 +25,7 @@ export default function Checkout() {
     notes: '',
   });
 
-  // ✅ تحميل بيانات المستخدم تلقائياً
+  // تحميل بيانات المستخدم تلقائياً
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -34,12 +36,19 @@ export default function Checkout() {
     }
   }, [user]);
 
-  const total = getCartTotal();
-  const tax = total * 0.15;
-  const finalTotal = total + tax;
+  // حساب المبالغ
+  const subtotal = getCartTotal();
+  const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  const tax = (subtotal - discount) * 0.15;
+  const shippingCost = appliedCoupon?.free_shipping ? 0 : 0; // شحن مجاني
+  const finalTotal = subtotal - discount + tax + shippingCost;
   
   const SAR_TO_USD = 0.2667;
   const finalTotalUSD = (finalTotal * SAR_TO_USD).toFixed(2);
+
+  const handleApplyCoupon = (coupon) => {
+    setAppliedCoupon(coupon);
+  };
 
   // دالة إرسال الطلب إلى WooCommerce
   const sendOrderToWooCommerce = async (orderData) => {
@@ -48,12 +57,17 @@ export default function Checkout() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': user ? `Bearer ${localStorage.getItem('token')}` : '', // ✅ أضف Token
+          'Authorization': user ? `Bearer ${localStorage.getItem('token')}` : '',
         },
         body: JSON.stringify({ 
           orderData: {
             ...orderData,
-            customer_id: user?.id || 0, // ✅ أضف customer_id
+            customer_id: user?.id || 0,
+            coupon_lines: appliedCoupon ? [
+              {
+                code: appliedCoupon.code,
+              }
+            ] : [],
           }
         }),
       });
@@ -132,7 +146,8 @@ export default function Checkout() {
         paid: true,
         paypalOrderId: details.id,
         items: cart,
-        customer_id: user?.id || 0, // ✅ أضف هذا
+        customer_id: user?.id || 0,
+        coupon_code: appliedCoupon?.code || '',
       };
 
       const result = await sendOrderToWooCommerce(orderData);
@@ -184,7 +199,8 @@ export default function Checkout() {
         paymentMethod: paymentMethod,
         paid: false,
         items: cart,
-        customer_id: user?.id || 0, // ✅ أضف هذا
+        customer_id: user?.id || 0,
+        coupon_code: appliedCoupon?.code || '',
       };
 
       const result = await sendOrderToWooCommerce(orderData);
@@ -226,7 +242,7 @@ export default function Checkout() {
           <div className="w-24 h-1 bg-gold mx-auto"></div>
         </div>
 
-        {/* ✅ رسالة للمستخدم المسجل */}
+        {/* رسالة للمستخدم المسجل */}
         {user && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -239,7 +255,7 @@ export default function Checkout() {
           </motion.div>
         )}
 
-        {/* ✅ رسالة للزوار */}
+        {/* رسالة للزوار */}
         {!user && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -257,8 +273,9 @@ export default function Checkout() {
         )}
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* باقي الكود كما هو... */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* نموذج البيانات */}
             <motion.form
               onSubmit={handleSubmit}
               initial={{ opacity: 0, x: -20 }}
@@ -303,7 +320,7 @@ export default function Checkout() {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      disabled={!!user} // ✅ تعطيل التعديل إذا كان مسجل
+                      disabled={!!user}
                       className={`w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all ${
                         user ? 'bg-gray-100 cursor-not-allowed' : ''
                       }`}
@@ -360,7 +377,6 @@ export default function Checkout() {
                 </div>
               </div>
 
-              {/* باقي الكود (طريقة الدفع والأزرار) كما هو... */}
               <h2 className="text-2xl font-bold mb-6">طريقة الدفع</h2>
               
               <div className="space-y-4 mb-8">
@@ -460,9 +476,15 @@ export default function Checkout() {
                 </button>
               )}
             </motion.form>
+
+            {/* قسم الكوبون */}
+            <CouponInput 
+              onApplyCoupon={handleApplyCoupon} 
+              subtotal={subtotal}
+            />
           </div>
 
-          {/* ملخص الطلب - باقي الكود كما هو */}
+          {/* ملخص الطلب */}
           <div className="lg:col-span-1">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -496,20 +518,41 @@ export default function Checkout() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-gray-600">
                   <span>المجموع الفرعي</span>
-                  <span className="font-bold">{total.toFixed(2)} ر.س</span>
+                  <span className="font-bold">{subtotal.toFixed(2)} ر.س</span>
                 </div>
+                
+                {appliedCoupon && (
+                  <div className="flex justify-between text-green-600">
+                    <span>الخصم ({appliedCoupon.code})</span>
+                    <span className="font-bold">-{discount.toFixed(2)} ر.س</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between text-gray-600">
                   <span>الضريبة (15%)</span>
                   <span className="font-bold">{tax.toFixed(2)} ر.س</span>
                 </div>
+                
                 <div className="flex justify-between text-gray-600">
                   <span>الشحن</span>
-                  <span className="font-bold text-green-600">مجاني</span>
+                  <span className="font-bold text-green-600">
+                    {appliedCoupon?.free_shipping ? 'مجاني 🎉' : 'مجاني'}
+                  </span>
                 </div>
+                
                 <div className="border-t pt-3 flex justify-between text-xl font-bold">
                   <span>المجموع الكلي</span>
                   <span className="text-gold">{finalTotal.toFixed(2)} ر.س</span>
                 </div>
+                
+                {appliedCoupon && discount > 0 && (
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <p className="text-sm text-green-700 font-bold text-center">
+                      🎉 وفرت {discount.toFixed(2)} ر.س!
+                    </p>
+                  </div>
+                )}
+                
                 {paymentMethod === 'paypal' && (
                   <div className="text-sm text-gray-500 text-center">
                     ≈ ${finalTotalUSD} USD
@@ -517,7 +560,7 @@ export default function Checkout() {
                 )}
               </div>
 
-              <div className="bg-gold/10 p-4 rounded-lg">
+              <div className="bg-gold/10 p-4 rounded-lg mb-6">
                 <p className="text-sm text-gray-700">
                   {paymentMethod === 'paypal' 
                     ? 'بعد الدفع عبر PayPal سيتم إرسال تفاصيل الطلب عبر واتساب'
@@ -526,7 +569,7 @@ export default function Checkout() {
                 </p>
               </div>
 
-              <div className="mt-6 space-y-3 text-sm text-gray-600">
+              <div className="space-y-3 text-sm text-gray-600">
                 <div className="flex items-start gap-2">
                   <span className="text-green-500">✓</span>
                   <span>شحن مجاني لجميع الطلبات</span>
