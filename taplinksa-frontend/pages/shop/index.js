@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Layout from '../../components/layout/Layout';
 
 import ProductsGrid from '../../components/shop/ProductsGrid';
-import { getProducts } from '../../lib/api';
+import { getPhysicalProducts } from '../../lib/api';
 
 export default function Shop({ initialProducts, totalPages }) {
   const [products, setProducts] = useState(initialProducts);
@@ -34,6 +34,20 @@ export default function Shop({ initialProducts, totalPages }) {
             <li className="text-gold font-bold">المتجر</li>
           </ol>
         </nav>
+
+        {/* Banner for Digital Subscriptions */}
+        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-4 flex flex-col md:flex-row items-center justify-between text-right" dir="rtl">
+          <span className="text-blue-900 font-medium mb-2 md:mb-0">
+            تبحث عن اشتراكات رقمية مثل Canva Pro؟ تصفّح قسم الاشتراكات الرقمية من هنا.
+          </span>
+          <a
+            href="/subscriptions"
+            className="btn-primary bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+            style={{ minWidth: 120 }}
+          >
+            قسم الاشتراكات الرقمية
+          </a>
+        </div>
 
         {/* Page Header */}
         <div className="text-center mb-12">
@@ -67,8 +81,7 @@ export default function Shop({ initialProducts, totalPages }) {
 }
 
 export async function getStaticProps() {
-  const { products, totalPages } = await getProducts(1, 12);
-  
+  const { products, totalPages } = await getPhysicalProducts(1, 12);
   return {
     props: {
       initialProducts: products,
