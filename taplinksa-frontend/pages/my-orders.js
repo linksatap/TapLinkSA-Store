@@ -285,15 +285,13 @@ const [reorderLoading, setReorderLoading] = useState(false);
 )}
 
 
+<Link
+  href={`/order/${order.id}`}
+  className="px-4 py-2 bg-gold text-dark font-bold rounded-lg hover:bg-yellow-500 transition-all"
+>
+  عرض التفاصيل
+</Link>
 
-                      <a
-                        href={`https://wa.me/966123456789?text=استفسار عن الطلب رقم ${order.number}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 py-3 px-6 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-all text-center"
-                      >
-                        📱 تواصل معنا
-                      </a>
                     </div>
                   </div>
                 </motion.div>
@@ -325,3 +323,4 @@ const [reorderLoading, setReorderLoading] = useState(false);
     </Layout>
   );
 }
+
