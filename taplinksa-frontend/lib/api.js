@@ -63,6 +63,34 @@ export async function getProducts(page = 1, perPage = 12) {
   }
 }
 
+/**
+ * Get only physical products (exclude digital-subscriptions category)
+ */
+export async function getPhysicalProducts(page = 1, perPage = 12) {
+  try {
+    const response = await axios.get(`${WC_API_URL}/products`, {
+      params: {
+        page,
+        per_page: perPage,
+        consumer_key: WC_CONSUMER_KEY,
+        consumer_secret: WC_CONSUMER_SECRET,
+      },
+    });
+    // Filter out products with category slug 'digital-subscriptions'
+    const filtered = response.data.filter(product => {
+      return !product.categories?.some(cat => cat.slug === 'digital-subscriptions');
+    });
+    return {
+      products: filtered,
+      total: filtered.length,
+      totalPages: parseInt(response.headers['x-wp-totalpages']),
+    };
+  } catch (error) {
+    console.error('Error fetching physical products:', error);
+    return { products: [], total: 0, totalPages: 0 };
+  }
+}
+
 export async function getProductBySlug(slug) {
   try {
     const response = await axios.get(`${WC_API_URL}/products`, {
