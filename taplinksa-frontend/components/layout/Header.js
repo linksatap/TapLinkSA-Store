@@ -43,9 +43,9 @@ export default function Header() {
     { href: '/services', label: 'الخدمات' },
     { href: '/shop', label: 'المتجر' },
 { href: '/subscriptions', label: 'الاشتراكات الرقمية' },
-    { href: '/about', label: 'من نحن' },
+    { href: '/coupons', label: ' 🎟️ العروض والكوبونات ' },
 
-    { href: '/contact', label: 'اتصل بنا' },
+    { href: '/about', label: 'من نحن ' },
   ];
 
 
@@ -95,7 +95,7 @@ export default function Header() {
             <span className="text-2xl font-bold">
               <span className="text-gold">متجر تاب لينك</span>
               <span className={scrolled || !isHomePage ? 'text-dark' : 'text-white'}>
-                {' '}
+                {' '}SA
               </span>
             </span>
           </Link>
@@ -204,6 +204,7 @@ export default function Header() {
                 </Link>
               </>
             )}
+
 
 
 
