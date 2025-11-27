@@ -295,7 +295,7 @@ export default function ProductPage({ product, relatedProducts }) {
                     </motion.button>
 
                     <motion.a
-                      href={`https://wa.me/966123456789?text=مرحباً، أريد الاستفسار عن ${product.name}`}
+                      href={`https://wa.me/966507004339?text=مرحباً، أريد الاستفسار عن ${product.name}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       whileHover={{ scale: 1.02 }}
