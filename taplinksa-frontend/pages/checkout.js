@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -16,16 +16,18 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [shippingInfo, setShippingInfo] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
+    state: '',
     city: '',
+    postcode: '',
     address: '',
     notes: '',
   });
 
-  // تحميل بيانات المستخدم تلقائياً
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -36,12 +38,18 @@ export default function Checkout() {
     }
   }, [user]);
 
-  // حساب المبالغ
+  // حساب الشحن عند تغيير الرمز البريدي فقط
+  useEffect(() => {
+    if (formData.postcode && cart.length > 0) {
+      calculateShipping();
+    }
+  }, [formData.postcode, cart]);
+
   const subtotal = getCartTotal();
   const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
-  const tax = (subtotal - discount) * 0.15;
-  const shippingCost = appliedCoupon?.free_shipping ? 0 : 0; // شحن مجاني
-  const finalTotal = subtotal - discount + tax + shippingCost;
+  const shippingCost = shippingInfo ? shippingInfo.cost : 0;
+  const tax = (subtotal - discount + shippingCost) * 0.15;
+  const finalTotal = subtotal - discount + shippingCost + tax;
   
   const SAR_TO_USD = 0.2667;
   const finalTotalUSD = (finalTotal * SAR_TO_USD).toFixed(2);
@@ -50,7 +58,45 @@ export default function Checkout() {
     setAppliedCoupon(coupon);
   };
 
-  // دالة إرسال الطلب إلى WooCommerce
+  const calculateShipping = async () => {
+    if (!formData.postcode) {
+      setShippingInfo(null);
+      return;
+    }
+
+    try {
+      const items = cart.map(item => ({
+        id: item.id,
+        virtual: item.virtual,
+        downloadable: item.downloadable,
+        quantity: item.quantity
+      }));
+
+      const response = await fetch('/api/shipping/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          postcode: formData.postcode,
+          items,
+          subtotal 
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setShippingInfo(data.shipping);
+      } else {
+        setShippingInfo(null);
+      }
+    } catch (error) {
+      console.error('Error calculating shipping:', error);
+      setShippingInfo(null);
+    }
+  };
+
   const sendOrderToWooCommerce = async (orderData) => {
     try {
       const response = await fetch('/api/create-order', {
@@ -133,13 +179,14 @@ export default function Checkout() {
     
     try {
       const details = await actions.order.capture();
-      console.log('PayPal Payment successful:', details);
       
       const orderData = {
         name: formData.name || `${details.payer.name.given_name} ${details.payer.name.surname}`,
         email: formData.email || details.payer.email_address,
         phone: formData.phone,
+        state: formData.state,
         city: formData.city,
+        postcode: formData.postcode,
         address: formData.address,
         notes: formData.notes,
         paymentMethod: 'paypal',
@@ -155,7 +202,7 @@ export default function Checkout() {
       clearCart();
       
       if (result) {
-        router.push(`/thank-you?payment=paypal&order_id=${result.orderId}&order_number=${result.orderNumber}&name=${encodeURIComponent(orderData.name)}&phone=${orderData.phone}&email=${encodeURIComponent(orderData.email)}&city=${encodeURIComponent(orderData.city)}&address=${encodeURIComponent(orderData.address)}&notes=${encodeURIComponent(orderData.notes || '')}&paypal_id=${details.id}`);
+        router.push(`/thank-you?payment=paypal&order_id=${result.orderId}&order_number=${result.orderNumber}`);
       } else {
         router.push('/thank-you?payment=paypal&order_id=' + details.id);
       }
@@ -182,8 +229,15 @@ export default function Checkout() {
     
     setLoading(true);
 
-    if (!formData.name || !formData.phone || !formData.email || !formData.city || !formData.address) {
-      alert('يرجى ملء جميع الحقول المطلوبة');
+    if (!formData.name || !formData.phone || !formData.email || !formData.state || !formData.city || !formData.postcode || !formData.address) {
+      alert('يرجى ملء جميع الحقول المطلوبة (بما في ذلك الرمز البريدي)');
+      setLoading(false);
+      return;
+    }
+
+    // التحقق من صحة الرمز البريدي
+    if (formData.postcode.length !== 5 || !/^\d+$/.test(formData.postcode)) {
+      alert('الرمز البريدي يجب أن يكون 5 أرقام فقط');
       setLoading(false);
       return;
     }
@@ -193,7 +247,9 @@ export default function Checkout() {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
+        state: formData.state,
         city: formData.city,
+        postcode: formData.postcode,
         address: formData.address,
         notes: formData.notes,
         paymentMethod: paymentMethod,
@@ -208,7 +264,7 @@ export default function Checkout() {
       clearCart();
       
       if (result) {
-        router.push(`/thank-you?order_id=${result.orderId}&order_number=${result.orderNumber}&name=${encodeURIComponent(formData.name)}&phone=${formData.phone}&email=${encodeURIComponent(formData.email)}&city=${encodeURIComponent(formData.city)}&address=${encodeURIComponent(formData.address)}&notes=${encodeURIComponent(formData.notes || '')}&payment=${paymentMethod}`);
+        router.push(`/thank-you?order_id=${result.orderId}&order_number=${result.orderNumber}`);
       } else {
         router.push('/thank-you');
       }
@@ -236,13 +292,10 @@ export default function Checkout() {
         </nav>
 
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4" data-aos="fade-up">
-            إتمام الطلب
-          </h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">إتمام الطلب</h1>
           <div className="w-24 h-1 bg-gold mx-auto"></div>
         </div>
 
-        {/* رسالة للمستخدم المسجل */}
         {user && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -255,7 +308,6 @@ export default function Checkout() {
           </motion.div>
         )}
 
-        {/* رسالة للزوار */}
         {!user && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -275,7 +327,6 @@ export default function Checkout() {
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             
-            {/* نموذج البيانات */}
             <motion.form
               onSubmit={handleSubmit}
               initial={{ opacity: 0, x: -20 }}
@@ -329,27 +380,67 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">المدينة *</label>
-                  <select
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all"
-                  >
-                    <option value="">اختر المدينة</option>
-                    <option value="بريدة">بريدة</option>
-                    <option value="عنيزة">عنيزة</option>
-                    <option value="الرس">الرس</option>
-                    <option value="المذنب">المذنب</option>
-                    <option value="البكيرية">البكيرية</option>
-                    <option value="الرياض">الرياض</option>
-                    <option value="جدة">جدة</option>
-                    <option value="الدمام">الدمام</option>
-                    <option value="أخرى">أخرى</option>
-                  </select>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">المنطقة *</label>
+                    <input
+                      type="text"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all"
+                      placeholder="مثال: القصيم"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">المدينة *</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all"
+                      placeholder="مثال: بريدة"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      الرمز البريدي * 
+                      <span className="text-red-500 text-xs mr-1">(إلزامي)</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="postcode"
+                      value={formData.postcode}
+                      onChange={handleChange}
+                      required
+                      maxLength="5"
+                      pattern="[0-9]{5}"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gold focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all font-mono text-lg"
+                      placeholder="51431"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      5 أرقام فقط - مطلوب لحساب الشحن
+                    </p>
+                  </div>
                 </div>
+
+                {/* رسالة تحذير إذا لم يُدخل الرمز */}
+                {!formData.postcode && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4"
+                  >
+                    <p className="text-sm text-yellow-800">
+                      ⚠️ <strong>الرمز البريدي مطلوب</strong> لحساب تكلفة الشحن بدقة
+                    </p>
+                  </motion.div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium mb-2">العنوان التفصيلي *</label>
@@ -363,6 +454,46 @@ export default function Checkout() {
                     placeholder="الحي، الشارع، رقم المبنى..."
                   ></textarea>
                 </div>
+
+                {/* عرض معلومات الشحن */}
+                {shippingInfo && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className={`rounded-lg p-4 border-2 ${
+                      shippingInfo.cost === 0 
+                        ? 'bg-green-50 border-green-300' 
+                        : 'bg-blue-50 border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-dark">
+                          🚚 {shippingInfo.zoneName || shippingInfo.name}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          الرمز البريدي: {formData.postcode} • {shippingInfo.deliveryTime || 'توصيل سريع'}
+                        </p>
+                      </div>
+                      <div className="text-left">
+                        {shippingInfo.cost === 0 ? (
+                          <span className="text-2xl font-bold text-green-600">مجاني</span>
+                        ) : (
+                          <span className="text-2xl font-bold text-blue-600">
+                            {shippingInfo.cost} ر.س
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {shippingInfo.reason && (
+                      <div className="bg-green-100 rounded-lg p-2 mt-3">
+                        <p className="text-sm text-green-800">
+                          🎉 <strong>{shippingInfo.reason}</strong>
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium mb-2">ملاحظات إضافية (اختياري)</label>
@@ -469,7 +600,7 @@ export default function Checkout() {
               ) : (
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !formData.postcode}
                   className="btn-primary w-full text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'جاري المعالجة...' : '✅ إكمال الطلب'}
@@ -477,14 +608,12 @@ export default function Checkout() {
               )}
             </motion.form>
 
-            {/* قسم الكوبون */}
             <CouponInput 
               onApplyCoupon={handleApplyCoupon} 
               subtotal={subtotal}
             />
           </div>
 
-          {/* ملخص الطلب */}
           <div className="lg:col-span-1">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -529,15 +658,24 @@ export default function Checkout() {
                 )}
                 
                 <div className="flex justify-between text-gray-600">
-                  <span>الضريبة (15%)</span>
-                  <span className="font-bold">{tax.toFixed(2)} ر.س</span>
+                  <span>الشحن</span>
+                  {shippingInfo ? (
+                    shippingInfo.cost === 0 ? (
+                      <span className="font-bold text-green-600">مجاني 🎉</span>
+                    ) : (
+                      <span className="font-bold">{shippingCost.toFixed(2)} ر.س</span>
+                    )
+                  ) : (
+                    <div className="text-left">
+                      <span className="text-sm text-red-500 block">أدخل الرمز البريدي</span>
+                      <span className="text-xs text-gray-400">لحساب تكلفة الشحن</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex justify-between text-gray-600">
-                  <span>الشحن</span>
-                  <span className="font-bold text-green-600">
-                    {appliedCoupon?.free_shipping ? 'مجاني 🎉' : 'مجاني'}
-                  </span>
+                  <span>الضريبة (15%)</span>
+                  <span className="font-bold">{tax.toFixed(2)} ر.س</span>
                 </div>
                 
                 <div className="border-t pt-3 flex justify-between text-xl font-bold">
@@ -572,15 +710,15 @@ export default function Checkout() {
               <div className="space-y-3 text-sm text-gray-600">
                 <div className="flex items-start gap-2">
                   <span className="text-green-500">✓</span>
-                  <span>شحن مجاني لجميع الطلبات</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-green-500">✓</span>
                   <span>دفع آمن ومضمون</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-green-500">✓</span>
                   <span>إمكانية الإرجاع خلال 14 يوم</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-green-500">✓</span>
+                  <span>دعم فني متاح 24/7</span>
                 </div>
               </div>
             </motion.div>
