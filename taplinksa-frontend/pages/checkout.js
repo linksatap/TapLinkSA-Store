@@ -199,6 +199,38 @@ const createOrder = (data, actions) => {
   console.log('💵 Subtotal:', subtotal, 'SAR');
   console.log('🚚 Shipping:', (shippingCost || 0), 'SAR');
   console.log('💰 Total:', totalSAR, 'SAR =', totalUSD, 'USD');
+// في بداية createOrder
+console.log('📦 Full Order Data:', {
+  name: formData.name,
+  firstName,
+  lastName,
+  email: formData.email,
+  phone: formData.phone,
+  cleanPhone,
+  city: formData.city,
+  state: formData.state,
+  postcode: formData.postcode,
+  address: formData.address,
+  totalSAR,
+  totalUSD,
+});
+
+// التحقق من المتطلبات
+if (!firstName || firstName.length < 2) {
+  alert('⚠️ يرجى إدخال الاسم الأول بشكل صحيح');
+  throw new Error('اسم غير صالح');
+}
+
+if (!lastName || lastName.length < 2) {
+  alert('⚠️ يرجى إدخال الاسم الكامل (الأول والأخير)');
+  throw new Error('يجب إدخال الاسم الكامل');
+}
+
+if (cleanPhone.startsWith('966')) {
+  alert('⚠️ خطأ في معالجة رقم الهاتف!');
+  console.error('Phone still has 966:', cleanPhone);
+  throw new Error('رقم هاتف غير صالح');
+}
 
   // 7. إنشاء الطلب
   return actions.order.create({
