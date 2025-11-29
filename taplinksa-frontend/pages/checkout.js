@@ -157,24 +157,45 @@ export default function Checkout() {
     });
   };
 
-  const createOrder = (data, actions) => {
-  // التحقق من البيانات
+const createOrder = (data, actions) => {
+  // 1. التحقق من البيانات
   if (!formData.name || !formData.email || !formData.phone || 
       !formData.city || !formData.postcode || !formData.address) {
     alert('⚠️ يرجى إكمال جميع البيانات أولاً');
     throw new Error('بيانات غير مكتملة');
   }
 
-  // فصل الاسم الأول والأخير
+  // 2. التحقق من الشحن
+  if (!shippingInfo?.available) {
+    alert('⚠️ يرجى إدخال رمز بريدي صحيح لحساب الشحن');
+    throw new Error('الشحن غير متوفر');
+  }
+
+  // 3. فصل الاسم
   const nameParts = formData.name.trim().split(' ');
   const firstName = nameParts[0] || 'Customer';
   const lastName = nameParts.slice(1).join(' ') || 'Name';
 
-  // تنظيف رقم الهاتف (إزالة الصفر الأول)
-  const cleanPhone = formData.phone.replace(/^0/, '');
+  // 4. تنظيف رقم الهاتف - مرة واحدة فقط
+  const cleanPhone = formData.phone
+    .toString()
+    .replace(/\s+/g, '')      // إزالة المسافات
+    .replace(/[^0-9]/g, '')   // فقط الأرقام
+    .replace(/^966/, '')      // إزالة كود الدولة
+    .replace(/^0+/, '');      // إزالة الأصفار الأولى
+
+  // 5. التحقق من طول الرقم
+  if (cleanPhone.length < 9 || cleanPhone.length > 10) {
+    alert('⚠️ رقم الهاتف غير صحيح');
+    throw new Error('رقم هاتف غير صالح');
+  }
 
   console.log('📦 Creating PayPal order with customer data...');
+  console.log('📱 Original phone:', formData.phone);
+  console.log('📱 Cleaned phone:', cleanPhone);
+  console.log('💵 Total:', finalTotalUSD, 'USD');
 
+  // 6. إنشاء الطلب
   return actions.order.create({
     intent: 'CAPTURE',
     purchase_units: [{
@@ -183,21 +204,21 @@ export default function Checkout() {
         currency_code: 'USD',
         value: finalTotalUSD,
       },
-      // ✅ إرسال معلومات الشحن
+      // معلومات الشحن
       shipping: {
         name: {
           full_name: formData.name,
         },
         address: {
           address_line_1: formData.address,
-          admin_area_2: formData.city, // المدينة
-          admin_area_1: formData.state, // المنطقة/الولاية
+          admin_area_2: formData.city,
+          admin_area_1: formData.state || 'Qassim',
           postal_code: formData.postcode,
           country_code: 'SA',
         },
       },
     }],
-    // ✅ معلومات المشتري
+    // معلومات المشتري
     payer: {
       name: {
         given_name: firstName,
@@ -205,33 +226,34 @@ export default function Checkout() {
       },
       email_address: formData.email,
       phone: {
-  phone_type: 'MOBILE',
-  phone_number: {
-    national_number: formData.phone
-      .replace(/^966/, '')  // ✅ إزالة 966
-      .replace(/^0/, '')     // ✅ إزالة 0
-      .replace(/\s+/g, '')   // ✅ إزالة المسافات
-      .replace(/[^0-9]/g, ''), // ✅ فقط الأرقام
-  },
-},
-
+        phone_type: 'MOBILE',
+        phone_number: {
+          national_number: cleanPhone, // ✅ استخدم المتغير المعرّف في السطر 20
+        },
+      },
       address: {
         address_line_1: formData.address,
         admin_area_2: formData.city,
-        admin_area_1: formData.state,
+        admin_area_1: formData.state || 'Qassim',
         postal_code: formData.postcode,
         country_code: 'SA',
       },
     },
     application_context: {
-      shipping_preference: 'SET_PROVIDED_ADDRESS', // ✅ استخدام العنوان المرسل
+      shipping_preference: 'SET_PROVIDED_ADDRESS',
       user_action: 'PAY_NOW',
       brand_name: 'تاب لينك السعودية',
       locale: 'ar-SA',
     },
+  }).then(orderId => {
+    console.log('✅ PayPal Order created:', orderId);
+    return orderId;
+  }).catch(error => {
+    console.error('❌ PayPal creation error:', error);
+    alert('حدث خطأ في إنشاء طلب الدفع. يرجى المحاولة مرة أخرى');
+    throw error;
   });
 };
-
 
   const onApprove = async (data, actions) => {
     setLoading(true);
