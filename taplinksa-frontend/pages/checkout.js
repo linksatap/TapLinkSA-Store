@@ -563,9 +563,9 @@ export default function Checkout() {
                     {paymentMethod === 'bank' && (
                       <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
                         <div className="font-medium mb-2">معلومات الحساب البنكي:</div>
-                        <div>اسم الحساب: مؤسسة تاب لينك</div>
+                        <div>اسم الحساب: مؤسسة أناقة المنازل التجارية</div>
                         <div>IBAN: SA00 0000 0000 0000 0000 0000</div>
-                        <div>البنك: البنك الأهلي السعودي</div>
+                        <div>البنك: البنك الراجحي </div>
                       </div>
                     )}
                   </div>
