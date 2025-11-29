@@ -17,11 +17,13 @@ function MyApp({ Component, pageProps }) {
   }, []);
 
   const paypalOptions = {
-    'client-id': process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
-    currency: 'USD',
-    intent: 'capture',
-    'disable-funding': 'card,credit',
-  };
+  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
+  currency: 'USD',
+  intent: 'capture',
+  components: 'buttons,funding-eligibility', // ✅ أضف funding-eligibility
+  'enable-funding': 'paylater,venmo', // ✅ فعّل طرق دفع إضافية
+};
+
 
   return (
     <UserProvider>
