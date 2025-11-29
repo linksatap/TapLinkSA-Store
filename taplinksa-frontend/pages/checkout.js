@@ -202,18 +202,19 @@ const createOrder = (data, actions) => {
 // في بداية createOrder
 console.log('📦 Full Order Data:', {
   name: formData.name,
-  firstName,
-  lastName,
+  firstName: firstName,
+  lastName: lastName,
   email: formData.email,
   phone: formData.phone,
-  cleanPhone,
   city: formData.city,
-  state: formData.state,
   postcode: formData.postcode,
   address: formData.address,
-  totalSAR,
-  totalUSD,
 });
+
+// ✅ تحقق من وجود @ في الإيميل
+console.log('📧 Email check:', formData.email);
+console.log('📧 Contains @?', formData.email.includes('@'));
+
 
 // التحقق من المتطلبات
 if (!firstName || firstName.length < 2) {
