@@ -586,6 +586,7 @@ export default function Checkout() {
               {paymentMethod === 'paypal' ? (
                 <div className="mt-6">
                   <PayPalButtons
+                   fundingSource={undefined}
                     createOrder={createOrder}
                     onApprove={onApprove}
                     onError={onError}
