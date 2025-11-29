@@ -159,43 +159,41 @@ export default function Checkout() {
 
 const createOrder = (data, actions) => {
   // 1. التحقق من البيانات
-  if (!formData.name || !formData.email || !formData.phone || 
+  /**if (!formData.name || !formData.email || !formData.phone || 
       !formData.city || !formData.postcode || !formData.address) {
     alert('⚠️ يرجى إكمال جميع البيانات أولاً');
     throw new Error('بيانات غير مكتملة');
   }
 
-  // 2. التحقق من الشحن
   if (!shippingInfo?.available) {
-    alert('⚠️ يرجى إدخال رمز بريدي صحيح لحساب الشحن');
+    alert('⚠️ يرجى إدخال رمز بريدي صحيح');
     throw new Error('الشحن غير متوفر');
-  }
+  }**/
 
-  // 3. فصل الاسم
+  // 2. فصل الاسم
   const nameParts = formData.name.trim().split(' ');
   const firstName = nameParts[0] || 'Customer';
   const lastName = nameParts.slice(1).join(' ') || 'Name';
 
-  // 4. تنظيف رقم الهاتف - مرة واحدة فقط
-  const cleanPhone = formData.phone
+  // 3. تنظيف رقم الهاتف
+  let cleanPhone = formData.phone
     .toString()
-    .replace(/\s+/g, '')      // إزالة المسافات
-    .replace(/[^0-9]/g, '')   // فقط الأرقام
-    .replace(/^966/, '')      // إزالة كود الدولة
-    .replace(/^0+/, '');      // إزالة الأصفار الأولى
+    .replace(/\s+/g, '')        // إزالة المسافات
+    .replace(/[^0-9]/g, '')     // فقط الأرقام
+    .replace(/^966/, '')        // إزالة كود السعودية
+    .replace(/^0+/, '');        // إزالة الأصفار
 
-  // 5. التحقق من طول الرقم
+  // التحقق من طول الرقم
   if (cleanPhone.length < 9 || cleanPhone.length > 10) {
     alert('⚠️ رقم الهاتف غير صحيح');
     throw new Error('رقم هاتف غير صالح');
   }
 
-  console.log('📦 Creating PayPal order with customer data...');
-  console.log('📱 Original phone:', formData.phone);
-  console.log('📱 Cleaned phone:', cleanPhone);
+  console.log('📦 Creating PayPal order...');
+  console.log('📱 Phone:', formData.phone, '→', cleanPhone);
   console.log('💵 Total:', finalTotalUSD, 'USD');
 
-  // 6. إنشاء الطلب
+  // 4. إنشاء الطلب مع كل البيانات
   return actions.order.create({
     intent: 'CAPTURE',
     purchase_units: [{
@@ -204,7 +202,7 @@ const createOrder = (data, actions) => {
         currency_code: 'USD',
         value: finalTotalUSD,
       },
-      // معلومات الشحن
+      // ✅ معلومات الشحن
       shipping: {
         name: {
           full_name: formData.name,
@@ -218,7 +216,7 @@ const createOrder = (data, actions) => {
         },
       },
     }],
-    // معلومات المشتري
+    // ✅ معلومات المشتري
     payer: {
       name: {
         given_name: firstName,
@@ -228,7 +226,7 @@ const createOrder = (data, actions) => {
       phone: {
         phone_type: 'MOBILE',
         phone_number: {
-          national_number: cleanPhone, // ✅ استخدم المتغير المعرّف في السطر 20
+          national_number: cleanPhone,
         },
       },
       address: {
@@ -239,21 +237,26 @@ const createOrder = (data, actions) => {
         country_code: 'SA',
       },
     },
+    // ✅ إعدادات التطبيق
     application_context: {
-      shipping_preference: 'SET_PROVIDED_ADDRESS',
+      shipping_preference: 'SET_PROVIDED_ADDRESS', // ✅ استخدام العنوان المرسل
       user_action: 'PAY_NOW',
       brand_name: 'تاب لينك السعودية',
       locale: 'ar-SA',
+      return_url: window.location.origin + '/thank-you',
+      cancel_url: window.location.origin + '/checkout',
     },
   }).then(orderId => {
-    console.log('✅ PayPal Order created:', orderId);
+    console.log('✅ PayPal Order ID:', orderId);
     return orderId;
   }).catch(error => {
-    console.error('❌ PayPal creation error:', error);
+    console.error('❌ PayPal Error:', error);
     alert('حدث خطأ في إنشاء طلب الدفع. يرجى المحاولة مرة أخرى');
     throw error;
   });
 };
+
+
 
   const onApprove = async (data, actions) => {
     setLoading(true);
