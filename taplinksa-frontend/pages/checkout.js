@@ -158,21 +158,75 @@ export default function Checkout() {
   };
 
   const createOrder = (data, actions) => {
-    return actions.order.create({
-      purchase_units: [
-        {
-          amount: {
-            value: finalTotalUSD,
-            currency_code: 'USD',
-          },
-          description: `TapLink Order - ${cart.length} items`,
-        },
-      ],
-      application_context: {
-        shipping_preference: 'NO_SHIPPING',
+  // التحقق من البيانات
+  if (!formData.name || !formData.email || !formData.phone || 
+      !formData.city || !formData.postcode || !formData.address) {
+    alert('⚠️ يرجى إكمال جميع البيانات أولاً');
+    throw new Error('بيانات غير مكتملة');
+  }
+
+  // فصل الاسم الأول والأخير
+  const nameParts = formData.name.trim().split(' ');
+  const firstName = nameParts[0] || 'Customer';
+  const lastName = nameParts.slice(1).join(' ') || 'Name';
+
+  // تنظيف رقم الهاتف (إزالة الصفر الأول)
+  const cleanPhone = formData.phone.replace(/^0/, '');
+
+  console.log('📦 Creating PayPal order with customer data...');
+
+  return actions.order.create({
+    intent: 'CAPTURE',
+    purchase_units: [{
+      description: `TapLink Order - ${cart.length} items`,
+      amount: {
+        currency_code: 'USD',
+        value: finalTotalUSD,
       },
-    });
-  };
+      // ✅ إرسال معلومات الشحن
+      shipping: {
+        name: {
+          full_name: formData.name,
+        },
+        address: {
+          address_line_1: formData.address,
+          admin_area_2: formData.city, // المدينة
+          admin_area_1: formData.state, // المنطقة/الولاية
+          postal_code: formData.postcode,
+          country_code: 'SA',
+        },
+      },
+    }],
+    // ✅ معلومات المشتري
+    payer: {
+      name: {
+        given_name: firstName,
+        surname: lastName,
+      },
+      email_address: formData.email,
+      phone: {
+        phone_type: 'MOBILE',
+        phone_number: {
+          national_number: cleanPhone,
+        },
+      },
+      address: {
+        address_line_1: formData.address,
+        admin_area_2: formData.city,
+        admin_area_1: formData.state,
+        postal_code: formData.postcode,
+        country_code: 'SA',
+      },
+    },
+    application_context: {
+      shipping_preference: 'SET_PROVIDED_ADDRESS', // ✅ استخدام العنوان المرسل
+      user_action: 'PAY_NOW',
+      brand_name: 'تاب لينك السعودية',
+      locale: 'ar-SA',
+    },
+  });
+};
+
 
   const onApprove = async (data, actions) => {
     setLoading(true);
