@@ -7,7 +7,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'cms.smartshopperz.com',
+        hostname: 'cms.taplinksa.com',
       },
       {
         protocol: 'https',
