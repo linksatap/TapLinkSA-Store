@@ -277,7 +277,7 @@ if (cleanPhone.startsWith('966')) {
     },
     application_context: {
       shipping_preference: 'SET_PROVIDED_ADDRESS',
-      user_action: 'PAY_NOW',
+      user_action: 'CONTINUE',
       brand_name: 'تاب لينك السعودية',
       locale: 'ar-SA',
     },
