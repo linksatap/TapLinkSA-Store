@@ -165,83 +165,96 @@ const createOrder = (data, actions) => {
     throw new Error('بيانات غير مكتملة');
   }
 
-  // 2. التحقق من صيغة الرمز البريدي
+  // 2. التحقق من صحة الإيميل
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) {
+    alert('⚠️ يرجى إدخال بريد إلكتروني صحيح (مثل: user@example.com)');
+    throw new Error('إيميل غير صالح');
+  }
+
+  // 3. التحقق من صيغة الرمز البريدي
   if (!/^\d{5}$/.test(formData.postcode)) {
     alert('⚠️ يرجى إدخال رمز بريدي صحيح (5 أرقام)');
     throw new Error('رمز بريدي غير صالح');
   }
 
-  // 3. فصل الاسم
+  // 4. فصل الاسم الأول والأخير
   const nameParts = formData.name.trim().split(' ');
   const firstName = nameParts[0] || 'Customer';
   const lastName = nameParts.slice(1).join(' ') || 'Name';
 
-  // 4. تنظيف رقم الهاتف
-  const cleanPhone = formData.phone
-    .toString()
-    .replace(/\s+/g, '')
-    .replace(/[^0-9]/g, '')
-    .replace(/^966/, '')
-    .replace(/^0+/, '');
+  // 5. التحقق من أن الاسم يحتوي على مسافة
+  if (!formData.name.includes(' ')) {
+    alert('⚠️ يرجى إدخال الاسم الكامل (الأول والأخير)');
+    throw new Error('اسم غير كامل');
+  }
 
-  // 5. التحقق من طول الرقم
+  // 6. تنظيف رقم الهاتف
+  let cleanPhone = formData.phone
+    .toString()
+    .replace(/\s+/g, '')      // إزالة المسافات
+    .replace(/[^0-9]/g, '')   // الاحتفاظ بالأرقام فقط
+    .replace(/^966/, '')      // إزالة 966 من البداية
+    .replace(/^0+/, '');      // إزالة الأصفار من البداية
+
+  // 7. التحقق من طول الرقم
   if (cleanPhone.length < 9 || cleanPhone.length > 10) {
     alert('⚠️ رقم الهاتف غير صحيح');
     throw new Error('رقم هاتف غير صالح');
   }
 
-  // 6. حساب التكلفة الإجمالية
+  // 8. حساب التكلفة
   const totalSAR = subtotal + (shippingCost || 0);
   const totalUSD = (totalSAR / 3.75).toFixed(2);
 
+  // 9. طباعة البيانات للتحقق
   console.log('📦 Creating PayPal order...');
   console.log('📱 Phone:', formData.phone, '→', cleanPhone);
   console.log('💵 Subtotal:', subtotal, 'SAR');
-  console.log('🚚 Shipping:', (shippingCost || 0), 'SAR');
+  console.log('🚚 Shipping:', shippingCost || 0, 'SAR');
   console.log('💰 Total:', totalSAR, 'SAR =', totalUSD, 'USD');
-// في بداية createOrder
-console.log('📦 Full Order Data:', {
-  name: formData.name,
-  firstName: firstName,
-  lastName: lastName,
-  email: formData.email,
-  phone: formData.phone,
-  city: formData.city,
-  postcode: formData.postcode,
-  address: formData.address,
-});
+  console.log('📦 Full Order Data:', {
+    name: formData.name,
+    firstName: firstName,
+    lastName: lastName,
+    email: formData.email,
+    phone: formData.phone,
+    cleanPhone: cleanPhone,
+    city: formData.city,
+    state: formData.state,
+    postcode: formData.postcode,
+    address: formData.address,
+    totalSAR: totalSAR,
+    totalUSD: totalUSD,
+  });
 
-// ✅ تحقق من وجود @ في الإيميل
-console.log('📧 Email check:', formData.email);
-console.log('📧 Contains @?', formData.email.includes('@'));
-
-
-// التحقق من المتطلبات
-if (!firstName || firstName.length < 2) {
-  alert('⚠️ يرجى إدخال الاسم الأول بشكل صحيح');
-  throw new Error('اسم غير صالح');
-}
-
-if (!lastName || lastName.length < 2) {
-  alert('⚠️ يرجى إدخال الاسم الكامل (الأول والأخير)');
-  throw new Error('يجب إدخال الاسم الكامل');
-}
-
-if (cleanPhone.startsWith('966')) {
-  alert('⚠️ خطأ في معالجة رقم الهاتف!');
-  console.error('Phone still has 966:', cleanPhone);
-  throw new Error('رقم هاتف غير صالح');
-}
-
-  // 7. إنشاء الطلب
+  // 10. إنشاء الطلب
   return actions.order.create({
     intent: 'CAPTURE',
     purchase_units: [{
-      description: `TapLink Order - ${cart.length} items`,
+      description: `طلب تاب لينك - ${cart.length} منتجات`,
       amount: {
         currency_code: 'USD',
         value: totalUSD,
+        breakdown: {
+          item_total: {
+            currency_code: 'USD',
+            value: (subtotal / 3.75).toFixed(2),
+          },
+          shipping: {
+            currency_code: 'USD',
+            value: ((shippingCost || 0) / 3.75).toFixed(2),
+          },
+        },
       },
+      items: cart.map(item => ({
+        name: item.name || 'منتج',
+        quantity: item.quantity?.toString() || '1',
+        unit_amount: {
+          currency_code: 'USD',
+          value: ((item.price || 0) / 3.75).toFixed(2),
+        },
+      })),
       shipping: {
         name: {
           full_name: formData.name,
@@ -277,16 +290,18 @@ if (cleanPhone.startsWith('966')) {
     },
     application_context: {
       shipping_preference: 'SET_PROVIDED_ADDRESS',
-      user_action: 'CONTINUE',
+      user_action: 'CONTINUE', // ← التغيير الأساسي هنا
       brand_name: 'تاب لينك السعودية',
       locale: 'ar-SA',
+      return_url: window.location.origin + '/checkout/success',
+      cancel_url: window.location.origin + '/checkout',
     },
   }).then(orderId => {
     console.log('✅ PayPal Order created:', orderId);
     return orderId;
   }).catch(error => {
     console.error('❌ PayPal Error:', error);
-    alert('حدث خطأ في إنشاء طلب الدفع. يرجى التحقق من البيانات');
+    alert('حدث خطأ في إنشاء طلب الدفع. يرجى التحقق من البيانات والمحاولة مرة أخرى.');
     throw error;
   });
 };
