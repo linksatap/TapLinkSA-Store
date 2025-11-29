@@ -586,20 +586,16 @@ export default function Checkout() {
               {paymentMethod === 'paypal' ? (
                 <div className="mt-6">
                   <PayPalButtons
-  style={{
-    layout: 'vertical',
-    color: 'gold',
-    shape: 'rect',
-    label: 'paypal',
-    height: 55,
-    tagline: false,
-  }}
-  fundingSource={undefined} // ✅ يعرض كل طرق الدفع المتاحة
-  createOrder={createPayPalOrder}
-  onApprove={onPayPalApprove}
-  onError={onPayPalError}
-/>
-
+                    createOrder={createOrder}
+                    onApprove={onApprove}
+                    onError={onError}
+                    style={{
+                      layout: 'vertical',
+                      color: 'gold',
+                      shape: 'rect',
+                      label: 'pay',
+                    }}
+                  />
                 </div>
               ) : (
                 <button
