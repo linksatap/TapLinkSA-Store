@@ -205,11 +205,16 @@ export default function Checkout() {
       },
       email_address: formData.email,
       phone: {
-        phone_type: 'MOBILE',
-        phone_number: {
-          national_number: cleanPhone,
-        },
-      },
+  phone_type: 'MOBILE',
+  phone_number: {
+    national_number: formData.phone
+      .replace(/^966/, '')  // ✅ إزالة 966
+      .replace(/^0/, '')     // ✅ إزالة 0
+      .replace(/\s+/g, '')   // ✅ إزالة المسافات
+      .replace(/[^0-9]/g, ''), // ✅ فقط الأرقام
+  },
+},
+
       address: {
         address_line_1: formData.address,
         admin_area_2: formData.city,
