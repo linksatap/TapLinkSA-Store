@@ -1,0 +1,35 @@
+# robots.txt for TapLinkSA Store
+# https://taplinksa.com
+
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Disallow crawling of admin and private areas
+Disallow: /api/
+Disallow: /admin/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /my-orders
+Disallow: /profile
+Disallow: /login
+Disallow: /register
+Disallow: /thank-you
+
+# Allow crawling of public pages
+Allow: /shop
+Allow: /blog
+Allow: /about
+Allow: /contact
+Allow: /services
+Allow: /subscriptions
+Allow: /coupons
+Allow: /faq
+Allow: /privacy-policy
+Allow: /terms
+
+# Crawl-delay for bots (optional, helps reduce server load)
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://taplinksa.com/sitemap.xml
