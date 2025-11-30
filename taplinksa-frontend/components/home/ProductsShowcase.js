@@ -311,7 +311,7 @@ export default function ProductsShowcase() {
 
     {/* معلومات إضافية */}
     <div className="mt-4 pt-4 border-t border-gray-100 text-center text-sm text-gray-500">
-      🚚 شحن مجاني
+      🚚 شحن سريع
     </div>
   </div>
 </motion.div>
