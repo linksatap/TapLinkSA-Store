@@ -702,7 +702,7 @@ export default function Checkout() {
                 <p className="text-sm text-gray-700">
                   {paymentMethod === 'paypal' 
                     ? 'بعد الدفع عبر PayPal سيتم إرسال تفاصيل الطلب عبر واتساب'
-                    : 'سيتم إرسال الطلب عبر واتساب وسنتواصل معك لتأكيد الطلب وإتمام الدفع'
+                    : 'وسائل الدفع الاخري م زالت تحت التطوير و الدمج '
                   }
                 </p>
               </div>
