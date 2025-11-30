@@ -7,6 +7,7 @@ import { UserProvider } from '../context/UserContext';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 
 function MyApp({ Component, pageProps }) {
+  import { SpeedInsights } from "@vercel/speed-insights/next"
   useEffect(() => {
     AOS.init({
       duration: 800,
