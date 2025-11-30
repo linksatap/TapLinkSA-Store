@@ -8,10 +8,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'cms.taplinksa.com',
+        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'via.placeholder.com',
+        pathname: '/**',
       },
     ],
     formats: ['image/avif', 'image/webp'],

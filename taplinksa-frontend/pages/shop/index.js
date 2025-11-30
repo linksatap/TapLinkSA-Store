@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { getProducts } from '../../lib/api'; // استيراد دالة جلب المنتجات
 import axios from 'axios';
+import { getCategories } from '../../lib/api'; // استيراد دالة جلب الفئات
 import Layout from '../../components/layout/Layout';
 import ProductCard from '../../components/shop/ProductCard';
 import { motion } from 'framer-motion';
@@ -7,23 +9,45 @@ import Link from 'next/link';
 
 export default function Shop({ initialProducts, initialTotal, initialTotalPages, categories }) {
   const [products, setProducts] = useState(initialProducts);
+  const [currentCategory, setCurrentCategory] = useState(''); // ✅ حالة الفئة الحالية
+  const [currentSortBy, setCurrentSortBy] = useState('date'); // ✅ حالة الترتيب الحالية
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [loading, setLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [sortBy, setSortBy] = useState('date');
+
+
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchProducts = async (page, category = '', sort = 'date', search = '') => {
+  const fetchProducts = async (page, category = currentCategory, sort = currentSortBy, search = searchTerm) => {
     setLoading(true);
+    
+    let order = 'desc'; // القيمة الافتراضية للترتيب (تنازلي)
+    let orderby = sort;
+    
+    // منطق خاص للترتيب حسب السعر
+    if (sort === 'price') {
+      order = 'asc'; // السعر: الأقل أولاً (تصاعدي)
+      orderby = 'price';
+    } else if (sort === 'price-desc') {
+      order = 'desc'; // السعر: الأعلى أولاً (تنازلي)
+      orderby = 'price';
+    } else if (sort === 'popularity' || sort === 'rating') {
+      order = 'desc'; // الأكثر مبيعاً والأعلى تقييماً (تنازلي)
+    }
+    
     try {
       const response = await fetch(
-        `/api/products?page=${page}&per_page=12&category=${category}&orderby=${sort}&order=desc&search=${search}`
+        `/api/products?page=${page}&per_page=12&category=${category}&orderby=${orderby}&order=${order}&search=${search}`
       );
       const data = await response.json();
       
-      if (data.success) {
-        setProducts(data.products);
+      if (data.products) {
+        // إذا كانت الصفحة 1، نستبدل المنتجات. وإلا، نضيفها (منطق التحميل الإضافي)
+        if (page === 1) {
+          setProducts(data.products);
+        } else {
+          setProducts(prev => [...prev, ...data.products]);
+        }
         setTotalPages(data.totalPages);
         setCurrentPage(page);
       }
@@ -40,18 +64,21 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
   };
 
   const handleCategoryChange = (categoryId) => {
-    setSelectedCategory(categoryId);
-    fetchProducts(1, categoryId, sortBy, searchTerm);
+    setCurrentCategory(categoryId);
+    setCurrentPage(1);
+    fetchProducts(1, categoryId, currentSortBy, searchTerm);
   };
 
   const handleSortChange = (sort) => {
-    setSortBy(sort);
-    fetchProducts(currentPage, selectedCategory, sort, searchTerm);
+    setCurrentSortBy(sort);
+    setCurrentPage(1);
+    fetchProducts(1, currentCategory, sort, searchTerm);
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchProducts(1, selectedCategory, sortBy, searchTerm);
+    setCurrentPage(1);
+    fetchProducts(1, currentCategory, currentSortBy, searchTerm);
   };
 
   return (
@@ -158,7 +185,7 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
             <button
               onClick={() => handleCategoryChange('')}
               className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedCategory === '' 
+                currentCategory === '' 
                   ? 'bg-gold text-dark shadow-lg scale-105' 
                   : 'bg-gray-100 hover:bg-gray-200'
               }`}
@@ -170,7 +197,7 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
                 key={cat.id}
                 onClick={() => handleCategoryChange(cat.id)}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  selectedCategory === cat.id.toString() 
+                  currentCategory === cat.id.toString() 
                     ? 'bg-gold text-dark shadow-lg scale-105' 
                     : 'bg-gray-100 hover:bg-gray-200'
                 }`}
@@ -184,7 +211,7 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
           <div className="flex items-center gap-3">
             <label className="font-medium text-gray-700">ترتيب:</label>
             <select
-              value={sortBy}
+              value={currentSortBy}
               onChange={(e) => handleSortChange(e.target.value)}
               className="px-4 py-2 rounded-lg border-2 border-gray-300 focus:border-gold outline-none bg-white cursor-pointer font-medium"
             >
@@ -296,12 +323,13 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
                 : 'لا توجد منتجات في هذا القسم حالياً'
               }
             </p>
-            {(searchTerm || selectedCategory) && (
+            {(searchTerm || currentCategory) && (
               <button
                 onClick={() => {
                   setSearchTerm('');
-                  setSelectedCategory('');
-                  fetchProducts(1, '', sortBy, '');
+
+                  setCurrentCategory('');
+                  fetchProducts(1, '', currentSortBy, '');
                 }}
                 className="btn-primary"
               >
@@ -369,49 +397,22 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
 // ✅ SSR - Server-Side Rendering
 export async function getServerSideProps() {
   try {
-    // جلب المنتجات
-    const productsResponse = await axios.get(
-      `${process.env.NEXT_PUBLIC_WC_API_URL}/products`,
-      {
-        params: {
-          page: 1,
-          per_page: 12,
-          status: 'publish',
-          orderby: 'date',
-          order: 'desc',
-        },
-        auth: {
-          username: process.env.WC_CONSUMER_KEY,
-          password: process.env.WC_CONSUMER_SECRET,
-        },
-        timeout: 10000,
-      }
-    );
+    // جلب المنتجات باستخدام الدالة المحسّنة والمخزنة مؤقتاً
+    const { products: initialProducts, total: initialTotal, totalPages: initialTotalPages } = await getProducts(1, 12, {
+      status: 'publish',
+      orderby: 'date',
+      order: 'desc',
+    });
 
-    // جلب الفئات
-    const categoriesResponse = await axios.get(
-      `${process.env.NEXT_PUBLIC_WC_API_URL}/products/categories`,
-      {
-        params: {
-          per_page: 50,
-          hide_empty: true,
-          orderby: 'count',
-          order: 'desc',
-        },
-        auth: {
-          username: process.env.WC_CONSUMER_KEY,
-          password: process.env.WC_CONSUMER_SECRET,
-        },
-        timeout: 10000,
-      }
-    );
+    // جلب الفئات باستخدام الدالة المحسّنة والمخزنة مؤقتاً
+    const categories = await getCategories();
 
     return {
       props: {
-        initialProducts: productsResponse.data,
-        initialTotal: parseInt(productsResponse.headers['x-wp-total'] || 0),
-        initialTotalPages: parseInt(productsResponse.headers['x-wp-totalpages'] || 0),
-        categories: categoriesResponse.data,
+        initialProducts,
+        initialTotal,
+        initialTotalPages,
+        categories,
       },
     };
   } catch (error) {

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getCachedData, setCachedData } from './cache';
 
 const WP_API_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL;
@@ -42,7 +43,13 @@ export async function getPostBySlug(slug) {
 }
 
 // WooCommerce Products API
-export async function getProducts(page = 1, perPage = 12) {
+export async function getProducts(page = 1, perPage = 12, params = {}) {
+  const cacheKey = `products_page_${page}_perpage_${perPage}_${JSON.stringify(params)}`;
+  const cachedData = getCachedData(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
   try {
     const response = await axios.get(`${WC_API_URL}/products`, {
       params: {
@@ -50,13 +57,20 @@ export async function getProducts(page = 1, perPage = 12) {
         per_page: perPage,
         consumer_key: WC_CONSUMER_KEY,
         consumer_secret: WC_CONSUMER_SECRET,
+        ...params, // دمج البارامترات الإضافية
+        // ✅ ضمان استخدام 'category' و 'orderby' و 'order' بشكل صحيح
+        category: params.category || undefined,
+        orderby: params.orderby || undefined,
+        order: params.order || undefined,
       },
     });
-    return {
+    const result = {
       products: response.data,
       total: parseInt(response.headers['x-wp-total']),
       totalPages: parseInt(response.headers['x-wp-totalpages']),
     };
+    setCachedData(cacheKey, result, 300); // تخزين مؤقت لمدة 5 دقائق
+    return result;
   } catch (error) {
     console.error('Error fetching products:', error);
     return { products: [], total: 0, totalPages: 0 };
@@ -67,6 +81,12 @@ export async function getProducts(page = 1, perPage = 12) {
  * Get only physical products (exclude digital-subscriptions category)
  */
 export async function getPhysicalProducts(page = 1, perPage = 12) {
+  const cacheKey = `physical_products_page_${page}_perpage_${perPage}`;
+  const cachedData = getCachedData(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
   try {
     const response = await axios.get(`${WC_API_URL}/products`, {
       params: {
@@ -80,11 +100,13 @@ export async function getPhysicalProducts(page = 1, perPage = 12) {
     const filtered = response.data.filter(product => {
       return !product.categories?.some(cat => cat.slug === 'digital-subscriptions');
     });
-    return {
+    const result = {
       products: filtered,
       total: filtered.length,
       totalPages: parseInt(response.headers['x-wp-totalpages']),
     };
+    setCachedData(cacheKey, result, 300); // تخزين مؤقت لمدة 5 دقائق
+    return result;
   } catch (error) {
     console.error('Error fetching physical products:', error);
     return { products: [], total: 0, totalPages: 0 };
@@ -92,6 +114,12 @@ export async function getPhysicalProducts(page = 1, perPage = 12) {
 }
 
 export async function getProductBySlug(slug) {
+  const cacheKey = `product_slug_${slug}`;
+  const cachedData = getCachedData(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
   try {
     const response = await axios.get(`${WC_API_URL}/products`, {
       params: {
@@ -100,7 +128,11 @@ export async function getProductBySlug(slug) {
         consumer_secret: WC_CONSUMER_SECRET,
       },
     });
-    return response.data[0] || null;
+    const result = response.data[0] || null;
+    if (result) {
+      setCachedData(cacheKey, result, 300); // تخزين مؤقت لمدة 5 دقائق
+    }
+    return result;
   } catch (error) {
     console.error('Error fetching product:', error);
     return null;
@@ -108,6 +140,12 @@ export async function getProductBySlug(slug) {
 }
 
 export async function getFeaturedProducts() {
+  const cacheKey = `featured_products`;
+  const cachedData = getCachedData(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
   try {
     const response = await axios.get(`${WC_API_URL}/products`, {
       params: {
@@ -117,9 +155,41 @@ export async function getFeaturedProducts() {
         consumer_secret: WC_CONSUMER_SECRET,
       },
     });
-    return response.data;
+    const result = response.data;
+    setCachedData(cacheKey, result, 300); // تخزين مؤقت لمدة 5 دقائق
+    return result;
   } catch (error) {
     console.error('Error fetching featured products:', error);
+    return [];
+  }
+}
+
+/**
+ * جلب فئات المنتجات مع التخزين المؤقت
+ */
+export async function getCategories() {
+  const cacheKey = 'product_categories';
+  const cachedData = getCachedData(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
+  try {
+    const response = await axios.get(`${WC_API_URL}/products/categories`, {
+      params: {
+        per_page: 50,
+        hide_empty: true,
+        orderby: 'count',
+        order: 'desc',
+        consumer_key: WC_CONSUMER_KEY,
+        consumer_secret: WC_CONSUMER_SECRET,
+      },
+    });
+    const result = response.data;
+    setCachedData(cacheKey, result, 3600); // تخزين مؤقت لمدة ساعة
+    return result;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
     return [];
   }
 }
@@ -132,6 +202,8 @@ export async function getFeaturedProducts() {
  * جلب جميع الاشتراكات الرقمية
  */
 export async function getSubscriptions(params = {}) {
+  // لا يتم تطبيق التخزين المؤقت هنا لأنها تستخدم في getSubscriptionsByTool و getSubscriptionsByDuration
+  // ويمكن تطبيقها في getSubscriptionsByTool و getSubscriptionsByDuration
   try {
     const response = await axios.get(`${WC_API_URL}/products`, {
       params: {
