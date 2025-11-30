@@ -61,7 +61,7 @@ export default function Footer() {
                 تاب لينك SA
               </h3>
               <p className="text-gray-400 leading-relaxed mb-6">
-                نحن متخصصون في تقديم حلول التسويق الرقمي، بطاقات NFC الذكية للشركات والأفراد في بريدة والمملكة.
+                نحن متخصصون في تقديم حلول التسويق الرقمي، بطاقات NFC الذكية للشركات والأفراد في المملكة.
               </p>
               
               {/* Social Media */}
@@ -146,7 +146,7 @@ export default function Footer() {
                   <span className="w-10 h-10 bg-gold/20 rounded-lg flex items-center justify-center text-gold group-hover:bg-gold group-hover:text-dark transition-all">
                     📞
                   </span>
-                  <span className="font-medium">+966 123 456 789</span>
+                  <span className="font-medium">+966 5007004339</span>
                 </a>
 
                 <a
