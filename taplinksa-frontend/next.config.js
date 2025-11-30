@@ -26,7 +26,7 @@ const nextConfig = {
 
   // Internationalization
   i18n: {
-    locales: ['ar', 'en'],
+    locales: ['ar'],
     defaultLocale: 'ar',
   },
 
