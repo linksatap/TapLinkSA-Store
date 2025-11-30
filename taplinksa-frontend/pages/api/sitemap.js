@@ -1,91 +1,147 @@
-// Dynamic Sitemap Generation API
-// This generates sitemap.xml dynamically including products and blog posts
+// pages/sitemap.xml.js
+import axios from 'axios';
 
-export default async function handler(req, res) {
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://taplinksa.com';
+const WP_URL = process.env.NEXT_PUBLIC_WP_URL || 'https://cms.taplinksa.com';
+
+function formatDate(dateString) {
   try {
-    // Base URL
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://taplinksa.com';
-    const currentDate = new Date().toISOString().split('T')[0];
+    return new Date(dateString).toISOString().split('T')[0];
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
+}
 
-    // Static pages
+function generateSitemapXML({ staticPages, products, posts }) {
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+  // الصفحات الثابتة (Landing / متجر / صفحات مهمة)
+  staticPages.forEach((page) => {
+    xml += `  <url>\n`;
+    xml += `    <loc>${SITE_URL}${page.path}</loc>\n`;
+    xml += `    <lastmod>${page.lastmod}</lastmod>\n`;
+    xml += `    <changefreq>${page.changefreq}</changefreq>\n`;
+    xml += `    <priority>${page.priority}</priority>\n`;
+    xml += `  </url>\n`;
+  });
+
+  // المنتجات (نفترض أن صفحة المنتج في Next هي /product/[slug])
+  products.forEach((product) => {
+    const lastmod =
+      product.date_modified || product.date_created || new Date().toISOString();
+    xml += `  <url>\n`;
+    xml += `    <loc>${SITE_URL}/product/${product.slug}</loc>\n`;
+    xml += `    <lastmod>${formatDate(lastmod)}</lastmod>\n`;
+    xml += `    <changefreq>weekly</changefreq>\n`;
+    xml += `    <priority>0.80</priority>\n`;
+    xml += `  </url>\n`;
+  });
+
+  // المقالات (نفترض أن صفحة المقال في Next هي /blog/[slug])
+  posts.forEach((post) => {
+    const lastmod = post.modified || post.date || new Date().toISOString();
+    xml += `  <url>\n`;
+    xml += `    <loc>${SITE_URL}/blog/${post.slug}</loc>\n`;
+    xml += `    <lastmod>${formatDate(lastmod)}</lastmod>\n`;
+    xml += `    <changefreq>monthly</changefreq>\n`;
+    xml += `    <priority>0.60</priority>\n`;
+    xml += `  </url>\n`;
+  });
+
+  xml += `</urlset>`;
+  return xml;
+}
+
+export async function getServerSideProps({ res }) {
+  try {
+    // 1) تعريف الصفحات الثابتة المهمة
+    const today = new Date().toISOString().split('T')[0];
+
     const staticPages = [
-      { url: '/', changefreq: 'daily', priority: '1.0' },
-      { url: '/shop', changefreq: 'daily', priority: '0.9' },
-      { url: '/blog', changefreq: 'weekly', priority: '0.8' },
-      { url: '/about', changefreq: 'monthly', priority: '0.7' },
-      { url: '/contact', changefreq: 'monthly', priority: '0.7' },
-      { url: '/services', changefreq: 'monthly', priority: '0.7' },
-      { url: '/faq', changefreq: 'monthly', priority: '0.6' },
-      { url: '/subscriptions', changefreq: 'weekly', priority: '0.8' },
-      { url: '/coupons', changefreq: 'weekly', priority: '0.7' },
-      { url: '/privacy-policy', changefreq: 'yearly', priority: '0.4' },
-      { url: '/terms', changefreq: 'yearly', priority: '0.4' },
+      { path: '/', changefreq: 'daily', priority: '1.00', lastmod: today },
+      { path: '/shop', changefreq: 'daily', priority: '0.90', lastmod: today },
+      { path: '/coupons', changefreq: 'weekly', priority: '0.80', lastmod: today },
+      { path: '/subscriptions', changefreq: 'weekly', priority: '0.80', lastmod: today },
+      { path: '/services', changefreq: 'monthly', priority: '0.70', lastmod: today },
+      { path: '/about', changefreq: 'monthly', priority: '0.60', lastmod: today },
+      { path: '/contact', changefreq: 'monthly', priority: '0.60', lastmod: today },
+      { path: '/faq', changefreq: 'monthly', priority: '0.50', lastmod: today },
+      { path: '/privacy-policy', changefreq: 'yearly', priority: '0.40', lastmod: today },
+      { path: '/terms', changefreq: 'yearly', priority: '0.40', lastmod: today },
     ];
 
-    // TODO: Fetch dynamic products from your API/CMS
-    // Example:
-    // const productsRes = await fetch(`${baseUrl}/api/products`);
-    // const products = await productsRes.json();
-    const products = []; // Replace with actual product data
+    // 2) جلب المنتجات من WooCommerce
+    let products = [];
+    try {
+      const productsRes = await axios.get(
+        `${WP_URL}/wp-json/wc/v3/products`,
+        {
+          params: {
+            consumer_key: process.env.WC_CONSUMER_KEY,
+            consumer_secret: process.env.WC_CONSUMER_SECRET,
+            status: 'publish',
+            per_page: 100,
+            orderby: 'modified',
+            order: 'desc',
+          },
+          timeout: 10000,
+        }
+      );
+      products = Array.isArray(productsRes.data) ? productsRes.data : [];
+    } catch (err) {
+      console.warn('⚠️ Failed to fetch products for sitemap:', err.message);
+      products = [];
+    }
 
-    // TODO: Fetch dynamic blog posts from your API/CMS
-    // Example:
-    // const blogRes = await fetch(`${baseUrl}/api/blog`);
-    // const blogPosts = await blogRes.json();
-    const blogPosts = []; // Replace with actual blog data
+    // 3) جلب المقالات من ووردبريس
+    let posts = [];
+    try {
+      const postsRes = await axios.get(
+        `${WP_URL}/wp-json/wp/v2/posts`,
+        {
+          params: {
+            status: 'publish',
+            per_page: 100,
+            order: 'desc',
+            orderby: 'modified',
+          },
+          timeout: 10000,
+        }
+      );
+      posts = Array.isArray(postsRes.data) ? postsRes.data : [];
+    } catch (err) {
+      console.warn('⚠️ Failed to fetch posts for sitemap:', err.message);
+      posts = [];
+    }
 
-    // Generate XML
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-`;
+    // 4) توليد XML
+    const xml = generateSitemapXML({ staticPages, products, posts });
 
-    // Add static pages
-    staticPages.forEach(page => {
-      xml += `
-  <url>
-    <loc>${baseUrl}${page.url}</loc>
-    <lastmod>${currentDate}</lastmod>
-    <changefreq>${page.changefreq}</changefreq>
-    <priority>${page.priority}</priority>
-  </url>`;
-    });
+    // 5) إرسال الرد
+    res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+    res.setHeader(
+      'Cache-Control',
+      'public, s-maxage=3600, stale-while-revalidate=86400'
+    );
+    res.write(xml);
+    res.end();
 
-    // Add dynamic products
-    products.forEach(product => {
-      xml += `
-  <url>
-    <loc>${baseUrl}/shop/${product.slug}</loc>
-    <lastmod>${product.updatedAt || currentDate}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`;
-    });
-
-    // Add dynamic blog posts
-    blogPosts.forEach(post => {
-      xml += `
-  <url>
-    <loc>${baseUrl}/blog/${post.slug}</loc>
-    <lastmod>${post.updatedAt || currentDate}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>`;
-    });
-
-    xml += `
-</urlset>`;
-
-    // Set headers
-    res.setHeader('Content-Type', 'text/xml');
-    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=7200');
-    
-    // Send response
-    res.status(200).send(xml);
+    return { props: {} };
   } catch (error) {
-    console.error('Error generating sitemap:', error);
-    res.status(500).json({ error: 'Failed to generate sitemap' });
+    console.error('❌ Error generating sitemap.xml:', error.message);
+
+    res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+    res.write(
+      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`
+    );
+    res.end();
+
+    return { props: {} };
   }
+}
+
+export default function Sitemap() {
+  // هذا الكومبوننت لا يُعرض، فقط مطلوب من Next
+  return null;
 }
