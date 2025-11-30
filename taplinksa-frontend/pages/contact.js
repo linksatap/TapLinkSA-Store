@@ -159,7 +159,7 @@ export default function Contact() {
                   <span className="text-3xl">📞</span>
                   <div>
                     <div className="font-bold text-dark mb-1">الهاتف</div>
-                    <div className="text-dark/80" dir="ltr">+966 123 456 789</div>
+                    <div className="text-dark/80" dir="ltr">+966 507004339</div>
                   </div>
                 </div>
 
@@ -175,7 +175,7 @@ export default function Contact() {
                   <span className="text-3xl">📍</span>
                   <div>
                     <div className="font-bold text-dark mb-1">العنوان</div>
-                    <div className="text-dark/80">بريدة - القصيم - السعودية</div>
+                    <div className="text-dark/80"> القصيم - السعودية</div>
                   </div>
                 </div>
 
@@ -183,7 +183,7 @@ export default function Contact() {
                   <span className="text-3xl">⏰</span>
                   <div>
                     <div className="font-bold text-dark mb-1">ساعات العمل</div>
-                    <div className="text-dark/80">السبت - الخميس: 9 صباحاً - 6 مساءً</div>
+                    <div className="text-dark/80">السبت - الخميس: 9 صباحاً - 10 مساءً</div>
                   </div>
                 </div>
               </div>
