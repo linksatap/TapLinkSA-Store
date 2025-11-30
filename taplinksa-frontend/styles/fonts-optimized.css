@@ -1,0 +1,41 @@
+/* Optimized Font Loading with font-display: swap for better performance */
+
+/* Preconnect to Google Fonts - Add this to _document.js */
+/* <link rel="preconnect" href="https://fonts.googleapis.com" />
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /> */
+
+/* Load only necessary font weights for Arabic (Cairo) and English (Inter) */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;600&display=swap');
+
+/* Fallback fonts for better performance */
+body {
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Optional: Local font loading for even better performance */
+/* Download fonts and host them locally, then use @font-face */
+/*
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/cairo-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/cairo-semibold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/cairo-bold.woff2') format('woff2');
+}
+*/
