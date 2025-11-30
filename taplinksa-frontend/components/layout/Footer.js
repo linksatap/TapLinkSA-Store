@@ -34,7 +34,7 @@ export default function Footer() {
   };
 
   const socialLinks = [
-    { name: 'WhatsApp', icon: '📱', href: 'https://wa.me/966538365924', color: 'hover:bg-green-500' },
+    { name: 'WhatsApp', icon: '📱', href: 'https://wa.me/966507004339', color: 'hover:bg-green-500' },
     { name: 'Instagram', icon: '📷', href: '#', color: 'hover:bg-pink-500' },
     { name: 'Twitter', icon: '🐦', href: '#', color: 'hover:bg-blue-400' },
     { name: 'TikTok', icon: '🎵', href: '#', color: 'hover:bg-black' },
