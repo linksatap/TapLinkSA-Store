@@ -2,11 +2,11 @@ import { getProducts } from '../../lib/api';
 
 export default async function handler(req, res) {
   try {
-    const { per_page = 6, page = 1 } = req.query;
+    const { per_page = 6, page = 1, ...restParams } = req.query;
     
     console.log('🔄 API Route called');
     
-    const data = await getProducts(parseInt(page), parseInt(per_page));
+    const data = await getProducts(parseInt(page), parseInt(per_page), restParams);
     
     console.log('✅ Products:', data.products?.length || 0);
     
