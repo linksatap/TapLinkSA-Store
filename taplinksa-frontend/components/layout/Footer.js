@@ -15,17 +15,16 @@ export default function Footer() {
 
   const footerLinks = {
     services: [
-      { name: 'إدارة Google Business', href: '/services/google-business' },
+      { name: 'إدارة Google Business', href: '/services' },
       { name: 'بطاقات NFC الذكية', href: '/shop' },
-      { name: 'تصميم المواقع', href: '/services/web-design' },
-      { name: 'التسويق الرقمي', href: '/services/marketing' }
+      { name: 'تصميم المواقع', href: '/services' },
+      { name: 'التسويق الرقمي', href: '/services' }
     ],
     quickLinks: [
       { name: 'الرئيسية', href: '/' },
       { name: 'من نحن', href: '/about' },
       { name: 'المتجر', href: '/shop' },
       { name: 'المدونة', href: '/blog' },
-      { name: 'الجودة', href: '/quality' }
     ],
     legal: [
       { name: 'سياسة الخصوصية', href: '/privacy' },
@@ -164,7 +163,7 @@ export default function Footer() {
                   <span className="w-10 h-10 bg-gold/20 rounded-lg flex items-center justify-center text-gold flex-shrink-0 mt-1">
                     📍
                   </span>
-                  <span className="font-medium">بريدة - القصيم - السعودية</span>
+                  <span className="font-medium"> القصيم - السعودية</span>
                 </div>
               </div>
 
