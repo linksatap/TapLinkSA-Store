@@ -157,156 +157,22 @@ export default function Checkout() {
     });
   };
 
-const createOrder = (data, actions) => {
-  // 1. التحقق من البيانات الأساسية
-  if (!formData.name || !formData.email || !formData.phone || 
-      !formData.city || !formData.postcode || !formData.address) {
-    alert('⚠️ يرجى إكمال جميع البيانات أولاً');
-    throw new Error('بيانات غير مكتملة');
-  }
-
-  // 2. التحقق من صحة الإيميل
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formData.email)) {
-    alert('⚠️ يرجى إدخال بريد إلكتروني صحيح (مثل: user@example.com)');
-    throw new Error('إيميل غير صالح');
-  }
-
-  // 3. التحقق من صيغة الرمز البريدي
-  if (!/^\d{5}$/.test(formData.postcode)) {
-    alert('⚠️ يرجى إدخال رمز بريدي صحيح (5 أرقام)');
-    throw new Error('رمز بريدي غير صالح');
-  }
-
-  // 4. فصل الاسم الأول والأخير
-  const nameParts = formData.name.trim().split(' ');
-  const firstName = nameParts[0] || 'Customer';
-  const lastName = nameParts.slice(1).join(' ') || 'Name';
-
-  // 5. التحقق من أن الاسم يحتوي على مسافة
-  if (!formData.name.includes(' ')) {
-    alert('⚠️ يرجى إدخال الاسم الكامل (الأول والأخير)');
-    throw new Error('اسم غير كامل');
-  }
-
-  // 6. تنظيف رقم الهاتف
-  let cleanPhone = formData.phone
-    .toString()
-    .replace(/\s+/g, '')      // إزالة المسافات
-    .replace(/[^0-9]/g, '')   // الاحتفاظ بالأرقام فقط
-    .replace(/^966/, '')      // إزالة 966 من البداية
-    .replace(/^0+/, '');      // إزالة الأصفار من البداية
-
-  // 7. التحقق من طول الرقم
-  if (cleanPhone.length < 9 || cleanPhone.length > 10) {
-    alert('⚠️ رقم الهاتف غير صحيح');
-    throw new Error('رقم هاتف غير صالح');
-  }
-
-  // 8. حساب التكلفة
-  const totalSAR = subtotal + (shippingCost || 0);
-  const totalUSD = (totalSAR / 3.75).toFixed(2);
-
-  // 9. طباعة البيانات للتحقق
-  console.log('📦 Creating PayPal order...');
-  console.log('📱 Phone:', formData.phone, '→', cleanPhone);
-  console.log('💵 Subtotal:', subtotal, 'SAR');
-  console.log('🚚 Shipping:', shippingCost || 0, 'SAR');
-  console.log('💰 Total:', totalSAR, 'SAR =', totalUSD, 'USD');
-  console.log('📦 Full Order Data:', {
-    name: formData.name,
-    firstName: firstName,
-    lastName: lastName,
-    email: formData.email,
-    phone: formData.phone,
-    cleanPhone: cleanPhone,
-    city: formData.city,
-    state: formData.state,
-    postcode: formData.postcode,
-    address: formData.address,
-    totalSAR: totalSAR,
-    totalUSD: totalUSD,
-  });
-
-  // 10. إنشاء الطلب
-  return actions.order.create({
-    intent: 'CAPTURE',
-    purchase_units: [{
-      description: `طلب تاب لينك - ${cart.length} منتجات`,
-      amount: {
-        currency_code: 'USD',
-        value: totalUSD,
-        breakdown: {
-          item_total: {
+  const createOrder = (data, actions) => {
+    return actions.order.create({
+      purchase_units: [
+        {
+          amount: {
+            value: finalTotalUSD,
             currency_code: 'USD',
-            value: (subtotal / 3.75).toFixed(2),
           },
-          shipping: {
-            currency_code: 'USD',
-            value: ((shippingCost || 0) / 3.75).toFixed(2),
-          },
+          description: `TapLink Order - ${cart.length} items`,
         },
+      ],
+      application_context: {
+        shipping_preference: 'NO_SHIPPING',
       },
-      items: cart.map(item => ({
-        name: item.name || 'منتج',
-        quantity: item.quantity?.toString() || '1',
-        unit_amount: {
-          currency_code: 'USD',
-          value: ((item.price || 0) / 3.75).toFixed(2),
-        },
-      })),
-      shipping: {
-        name: {
-          full_name: formData.name,
-        },
-        address: {
-          address_line_1: formData.address,
-          admin_area_2: formData.city,
-          admin_area_1: formData.state || 'Qassim',
-          postal_code: formData.postcode,
-          country_code: 'SA',
-        },
-      },
-    }],
-    payer: {
-      name: {
-        given_name: firstName,
-        surname: lastName,
-      },
-      email_address: formData.email,
-      phone: {
-        phone_type: 'MOBILE',
-        phone_number: {
-          national_number: cleanPhone,
-        },
-      },
-      address: {
-        address_line_1: formData.address,
-        admin_area_2: formData.city,
-        admin_area_1: formData.state || 'Qassim',
-        postal_code: formData.postcode,
-        country_code: 'SA',
-      },
-    },
-    application_context: {
-      shipping_preference: 'SET_PROVIDED_ADDRESS',
-      user_action: 'CONTINUE', // ← التغيير الأساسي هنا
-      brand_name: 'تاب لينك السعودية',
-      locale: 'ar-SA',
-      return_url: window.location.origin + '/checkout/success',
-      cancel_url: window.location.origin + '/checkout',
-    },
-  }).then(orderId => {
-    console.log('✅ PayPal Order created:', orderId);
-    return orderId;
-  }).catch(error => {
-    console.error('❌ PayPal Error:', error);
-    alert('حدث خطأ في إنشاء طلب الدفع. يرجى التحقق من البيانات والمحاولة مرة أخرى.');
-    throw error;
-  });
-};
-
-
+    });
+  };
 
   const onApprove = async (data, actions) => {
     setLoading(true);
@@ -697,9 +563,9 @@ const createOrder = (data, actions) => {
                     {paymentMethod === 'bank' && (
                       <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
                         <div className="font-medium mb-2">معلومات الحساب البنكي:</div>
-                        <div>اسم الحساب: مؤسسة أناقة المنازل التجارية</div>
+                        <div>اسم الحساب: مؤسسة تاب لينك</div>
                         <div>IBAN: SA00 0000 0000 0000 0000 0000</div>
-                        <div>البنك: البنك الراجحي </div>
+                        <div>البنك: البنك الأهلي السعودي</div>
                       </div>
                     )}
                   </div>
@@ -720,7 +586,6 @@ const createOrder = (data, actions) => {
               {paymentMethod === 'paypal' ? (
                 <div className="mt-6">
                   <PayPalButtons
-                   fundingSource={undefined}
                     createOrder={createOrder}
                     onApprove={onApprove}
                     onError={onError}
