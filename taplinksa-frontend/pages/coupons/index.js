@@ -19,8 +19,25 @@ export default function CouponsPage({ initialCoupons }) {
   const [copiedId, setCopiedId] = useState(null);
   const [shareMenuOpen, setShareMenuOpen] = useState(null);
   const [revealedCouponId, setRevealedCouponId] = useState(null);
+  
+  // 🆕 فلترة حسب الكتالوج
+  const [selectedCatalog, setSelectedCatalog] = useState('الكل');
 
-  // ✅ تنسيق التاريخ بدون مشاكل Hydration
+  // استخراج جميع الكتالوجات المتاحة
+  const allCatalogs = ['الكل', ...Array.from(
+    new Set(
+      coupons.flatMap(coupon => coupon.catalogs || [])
+    )
+  )];
+
+  // فلترة الكوبونات حسب الكتالوج المختار
+  const filteredCoupons =
+    selectedCatalog === 'الكل'
+      ? coupons
+      : coupons.filter(coupon =>
+          (coupon.catalogs || []).includes(selectedCatalog)
+        );
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     try {
@@ -31,7 +48,6 @@ export default function CouponsPage({ initialCoupons }) {
     }
   };
 
-  // نسخ الكوبون + تتبع النسخ
   const handleCopyCoupon = async (coupon) => {
     try {
       await navigator.clipboard.writeText(coupon.coupon_code);
@@ -56,10 +72,8 @@ export default function CouponsPage({ initialCoupons }) {
     }
   };
 
-  // استخدام الكوبون (نسخ + تتبع + فتح الرابط)
   const handleUseCoupon = async (coupon) => {
     try {
-      // لو لم يكن مكشوفاً، اكشفه أولاً
       if (revealedCouponId !== coupon.id) {
         setRevealedCouponId(coupon.id);
       }
@@ -102,7 +116,6 @@ export default function CouponsPage({ initialCoupons }) {
     return days > 0 ? days : 0;
   };
 
-  // مشاركة الكوبون
   const handleShare = (coupon, platform) => {
     const url =
       typeof window !== 'undefined'
@@ -168,20 +181,49 @@ export default function CouponsPage({ initialCoupons }) {
           </motion.p>
         </div>
 
+        {/* 🆕 فلاتر الكتالوج */}
+        {allCatalogs.length > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="flex flex-wrap gap-3 justify-center mb-10"
+          >
+            {allCatalogs.map((catalog) => (
+              <button
+                key={catalog}
+                onClick={() => setSelectedCatalog(catalog)}
+                className={`px-6 py-3 rounded-full font-bold transition-all ${
+                  selectedCatalog === catalog
+                    ? 'bg-gold text-dark shadow-lg scale-105'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow'
+                }`}
+              >
+                {catalog === 'الكل' ? '📋 ' : '🏷️ '}
+                {catalog}
+              </button>
+            ))}
+          </motion.div>
+        )}
+
         {/* Coupons Grid */}
-        {coupons.length === 0 ? (
+        {filteredCoupons.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-20"
           >
             <div className="text-8xl mb-6">🎫</div>
-            <h2 className="text-2xl font-bold mb-2">لا توجد كوبونات حالياً</h2>
-            <p className="text-gray-600">تابعنا لتحصل على أحدث العروض</p>
+            <h2 className="text-2xl font-bold mb-2">
+              {coupons.length === 0 ? 'لا توجد كوبونات حالياً' : `لا توجد كوبونات في "${selectedCatalog}"`}
+            </h2>
+            <p className="text-gray-600">
+              {coupons.length === 0 ? 'تابعنا لتحصل على أحدث العروض' : 'جرب فئة أخرى'}
+            </p>
           </motion.div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {coupons.map((coupon, index) => {
+            {filteredCoupons.map((coupon, index) => {
               const expired = isExpired(coupon.expiry_date);
               const daysLeft = getDaysRemaining(coupon.expiry_date);
               const isRevealed = revealedCouponId === coupon.id;
@@ -213,14 +255,12 @@ export default function CouponsPage({ initialCoupons }) {
                       </div>
                     )}
 
-                    {/* Badge الخصم */}
                     {coupon.discount_value && (
                       <div className="absolute top-4 right-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg">
                         {coupon.discount_value}
                       </div>
                     )}
 
-                    {/* Badge منتهي */}
                     {expired && (
                       <div className="absolute top-4 left-4 bg-gray-600 text-white px-4 py-2 rounded-full font-bold text-sm">
                         منتهي
@@ -230,7 +270,6 @@ export default function CouponsPage({ initialCoupons }) {
 
                   {/* محتوى الكوبون */}
                   <div className="p-6">
-                    {/* اسم الشركة */}
                     {coupon.company_name && (
                       <div className="flex items-center gap-2 mb-2">
                         <FiTag className="text-gold" />
@@ -240,21 +279,18 @@ export default function CouponsPage({ initialCoupons }) {
                       </div>
                     )}
 
-                    {/* عنوان الكوبون */}
                     <h3 className="text-xl font-bold mb-3 text-gray-800 line-clamp-2">
                       {coupon.title}
                     </h3>
 
-                    {/* الوصف */}
                     {coupon.description && (
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                         {coupon.description}
                       </p>
                     )}
 
-                    {/* 🎯 منطقة الكوبون (تجربة كشف جذابة) */}
+                    {/* منطقة الكوبون */}
                     <div className="bg-gradient-to-r from-gold/20 to-yellow-100 border-2 border-dashed border-gold rounded-xl p-4 mb-4 relative overflow-hidden">
-                      {/* طبقة الخلفية المتحركة لمحاكاة القشط */}
                       {!isRevealed && !expired && (
                         <motion.div
                           initial={{ x: '0%' }}
@@ -266,7 +302,6 @@ export default function CouponsPage({ initialCoupons }) {
                       )}
 
                       {isRevealed ? (
-                        // الكوبون مكشوف
                         <div className="flex items-center justify-between relative z-10">
                           <div className="flex-1">
                             <span className="text-xs text-gray-600 block mb-1">
@@ -301,31 +336,28 @@ export default function CouponsPage({ initialCoupons }) {
                           </button>
                         </div>
                       ) : (
-                        // الكوبون مخفي حتى الضغط (محاكاة القشط)
                         <button
                           onClick={async () => {
-  if (!expired) {
-    setRevealedCouponId(coupon.id);
+                            if (!expired) {
+                              setRevealedCouponId(coupon.id);
+                              
+                              // تتبع الكشف
+                              try {
+                                await axios.post(
+                                  `${process.env.NEXT_PUBLIC_WP_API_URL}/taplink/v1/coupon-track`,
+                                  {
+                                    coupon_id: coupon.id,
+                                    action_type: 'reveal',
+                                  },
+                                  { timeout: 3000 }
+                                );
+                              } catch (e) {
+                                console.warn('Tracking reveal error (ignored):', e.message);
+                              }
 
-    // تسجيل كشف الكوبون
-    try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_WP_API_URL}/taplink/v1/coupon-track`,
-        {
-          coupon_id: coupon.id,
-          action_type: 'reveal', // نوع جديد
-        },
-        { timeout: 3000 }
-      );
-    } catch (e) {
-      console.warn('Tracking reveal error (ignored):', e.message);
-    }
-
-    // اختياري: نسخ تلقائي بعد الكشف
-    await handleCopyCoupon(coupon);
-  }
-}}
-
+                              await handleCopyCoupon(coupon);
+                            }
+                          }}
                           disabled={expired}
                           className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg relative z-10 transition-all ${
                             expired
@@ -349,7 +381,6 @@ export default function CouponsPage({ initialCoupons }) {
                       )}
                     </div>
 
-                    {/* زر الذهاب للموقع */}
                     <button
                       onClick={() => handleUseCoupon(coupon)}
                       disabled={expired}
@@ -533,7 +564,6 @@ export async function getServerSideProps() {
     };
   } catch (error) {
     console.error('❌ Error fetching coupons:', error.message);
-    console.error('Full error:', error.response?.data || error);
 
     return {
       props: {
