@@ -66,7 +66,7 @@ export default function ThankYou() {
     }
     
     message += `*رقم الطلب:* ${orderDetails.number}%0A`;
-    message += `رابط الطلب: https://cms.smartshopperz.com/wp-admin/post.php?post=${orderDetails.id}&action=edit`;
+    message += `رابط الطلب: https://cms.taplinksa.com/wp-admin/post.php?post=${orderDetails.id}&action=edit`;
 
     const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '966507004339';
     window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');

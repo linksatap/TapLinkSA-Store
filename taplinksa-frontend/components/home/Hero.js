@@ -20,7 +20,7 @@ export default function HeroSection() {
 
   const stats = [
     { number: '500+', label: 'عميل سعيد', icon: '😊' },
-    { number: '1000+', label: 'مشروع', icon: '📊' },
+    { number: '100+', label: 'مشروع', icon: '📊' },
     { number: '+5', label: 'سنوات خبرة', icon: '🏆' },
   ];
 
