@@ -1,22 +1,40 @@
-import "@/styles/globals.css";
-import dynamic from "next/dynamic";
-import { CartProvider } from "@/context/CartContext";
-import { UserProvider } from "@/context/UserContext";
+import { useEffect } from 'react';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+import '../styles/globals.css';
+import { CartProvider } from '../context/CartContext';
+import { UserProvider } from '../context/UserContext';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+  import { SpeedInsights } from "@vercel/speed-insights/next"
 
-// تحميل AOS فقط في المتصفح
-const AOSInit = dynamic(() => import("@/components/common/AOSInit"), {
-  ssr: false,
-});
+function MyApp({ Component, pageProps }) {
+  useEffect(() => {
+    AOS.init({
+      duration: 800,
+      once: true,
+      offset: 50,
+      easing: 'ease-out-cubic',
+    });
+  }, []);
 
-export default function MyApp({ Component, pageProps }) {
+  const paypalOptions = {
+  clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
+  currency: 'USD',
+  intent: 'capture',
+  components: 'buttons,funding-eligibility', // ✅ أضف funding-eligibility
+  'enable-funding': 'paylater,venmo', // ✅ فعّل طرق دفع إضافية
+};
+
+
   return (
-    <>
-      <AOSInit />
-      <UserProvider>
+    <UserProvider>
+      <PayPalScriptProvider options={paypalOptions}>
         <CartProvider>
           <Component {...pageProps} />
         </CartProvider>
-      </UserProvider>
-    </>
+      </PayPalScriptProvider>
+    </UserProvider>
   );
 }
+
+export default MyApp;
