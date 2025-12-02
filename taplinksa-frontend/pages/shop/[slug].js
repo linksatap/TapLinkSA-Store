@@ -7,8 +7,13 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/layout/Layout';
 import { useCart } from '../../context/CartContext';
 import ProductReviews from '../../components/ProductReviews';
+import ProductSchema from '@/components/seo/ProductSchema';
 
 export default function ProductPage({ product, relatedProducts }) {
+ 
+
+
+
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -91,6 +96,8 @@ export default function ProductPage({ product, relatedProducts }) {
       description={product.short_description?.replace(/<[^>]*>/g, '').slice(0, 160)}
       image={images[0]?.src}
     >
+            <ProductSchema product={product} />
+
       <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
         <div className="container-custom py-8">
           
