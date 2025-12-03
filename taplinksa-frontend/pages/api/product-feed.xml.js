@@ -11,7 +11,7 @@ export default async function handler(req, res) {
       return res.status(404).send(`
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
-  hannel>
+  <channel>
     <title>تاب لينك السعودية - منتجات</title>
     <link>https://taplinksa.com</link>
     <description>لا توجد منتجات حالياً</description>
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     res.status(500).send(`
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
-  hannel>
+  <channel>
     <title>تاب لينك السعودية - خطأ مؤقت</title>
     <link>https://taplinksa.com</link>
     <description>خطأ في تحديث البيانات، جاري الإصلاح</description>
@@ -73,7 +73,7 @@ function generateFixedFeed(products) {
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
-  hannel>
+  <channel>
     <title><![CDATA[تاب لينك السعودية - بطاقات NFC الذكية]]></title>
     <link>${siteUrl}</link>
     <description><![CDATA[بطاقات NFC الذكية وحلول التسويق الرقمي في السعودية]]></description>
