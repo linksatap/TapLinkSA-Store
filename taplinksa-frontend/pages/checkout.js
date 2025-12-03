@@ -48,8 +48,8 @@ export default function Checkout() {
   const subtotal = getCartTotal();
   const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
   const shippingCost = shippingInfo ? shippingInfo.cost : 0;
-  const tax = (subtotal - discount + shippingCost) * 0.15;
-  const finalTotal = subtotal - discount + shippingCost + tax;
+ // const tax = (subtotal - discount + shippingCost) * 0.15;
+  const finalTotal = subtotal - discount + shippingCost ;// + tax
   
   const SAR_TO_USD = 0.2667;
   const finalTotalUSD = (finalTotal * SAR_TO_USD).toFixed(2);
@@ -673,11 +673,7 @@ export default function Checkout() {
                   )}
                 </div>
                 
-                <div className="flex justify-between text-gray-600">
-                  <span>الضريبة (15%)</span>
-                  <span className="font-bold">{tax.toFixed(2)} ر.س</span>
-                </div>
-                
+               
                 <div className="border-t pt-3 flex justify-between text-xl font-bold">
                   <span>المجموع الكلي</span>
                   <span className="text-gold">{finalTotal.toFixed(2)} ر.س</span>
