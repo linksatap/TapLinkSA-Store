@@ -672,8 +672,12 @@ export default function Checkout() {
                     </div>
                   )}
                 </div>
-                
-               
+                {/*
+                <div className="flex justify-between text-gray-600">
+                  <span>الضريبة (15%)</span>
+                  <span className="font-bold">{tax.toFixed(2)} ر.س</span>
+                </div>
+                */}
                 <div className="border-t pt-3 flex justify-between text-xl font-bold">
                   <span>المجموع الكلي</span>
                   <span className="text-gold">{finalTotal.toFixed(2)} ر.س</span>
