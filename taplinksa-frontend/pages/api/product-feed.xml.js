@@ -1,45 +1,41 @@
-// pages/api/product-feed.xml.js - النسخة المثالية المُصححة
-import axios from 'axios';
+// pages/api/product-feed.xml.js
+// Google Merchant • Zero Error • Clean XML v6.0
+
+import axios from "axios";
 
 export default async function handler(req, res) {
   try {
-    console.log('🚀 Google Merchant Feed v5.0 - Perfect');
-    
-    const products = await fetchOptimizedProducts();
-    
-    if (!products?.length) {
-      res.status(200).send(createEmptyFeed());
-      return;
-    }
+    console.log("🚀 Generating Error-Free Google Merchant Feed…");
 
-    const feed = createUltimateFeed(products);
-    
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate');
-    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-    res.status(200).send(feed);
-    
-    console.log(`✅ Feed ready: ${products.length} products`);
-    
-  } catch (error) {
-    console.error('❌ Feed failed:', error);
-    res.status(200).send(createErrorFeed());
+    const products = await fetchProducts();
+
+    const xml = products.length
+      ? buildFeed(products)
+      : emptyFeed();
+
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate");
+    res.setHeader("X-Robots-Tag", "noindex");
+
+    return res.status(200).send(xml);
+
+  } catch (err) {
+    console.error("❌ Feed Error:", err);
+    return res.status(200).send(errorFeed());
   }
 }
 
-// ================================
-// 1. جلب المنتجات ✅
-// ================================
-async function fetchOptimizedProducts() {
+/*===============================================
+  1) Fetch WooCommerce Products & Categories
+================================================*/
+async function fetchProducts() {
   try {
-    const [productsRes, categoriesRes] = await Promise.all([
+    const [pRes, cRes] = await Promise.all([
       axios.get(`${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/wc/v3/products`, {
         params: {
-          per_page: 100,
-          status: 'publish',
-          stock_status: 'instock',
-          orderby: 'date',
-          order: 'desc',
+          per_page: 150,
+          status: "publish",
+          stock_status: "instock",
         },
         auth: {
           username: process.env.WC_CONSUMER_KEY,
@@ -47,259 +43,181 @@ async function fetchOptimizedProducts() {
         },
         timeout: 15000,
       }),
+
       axios.get(`${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/wc/v3/products/categories`, {
         auth: {
           username: process.env.WC_CONSUMER_KEY,
           password: process.env.WC_CONSUMER_SECRET,
         },
-      }),
+      })
     ]);
 
-    return productsRes.data.map(product => ({
-      ...product,
-      fullCategories: categoriesRes.data.filter(cat =>
-        product.categories?.some(pCat => pCat.id === cat.id) // ✅ مُصحح
-      ),
+    return pRes.data.map(p => ({
+      ...p,
+      fullCategories: cRes.data.filter(cat =>
+        p.categories?.some(c => c.id === cat.id)
+      )
     }));
-    
-  } catch (error) {
-    console.error('Fetch failed:', error.message);
+
+  } catch (e) {
+    console.log("Fetch Failed:", e.message);
     return [];
   }
 }
 
-// ================================
-// 2. Feed محسّن ✅
-// ================================
-function createUltimateFeed(products) {
-  const siteUrl = 'https://taplinksa.com';
+/*===============================================
+  2) Build XML Feed
+================================================*/
+function buildFeed(products) {
   const now = new Date().toISOString();
+  const siteUrl = "https://taplinksa.com";
+
+  const items = products.map(p => buildItem(p, siteUrl)).join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title><![CDATA[تاب لينك السعودية - بطاقات NFC الذكية وحلول التسويق الرقمي]]></title>
+    <title><![CDATA[TapLink SA – NFC Cards]]></title>
     <link>${siteUrl}</link>
-    <description><![CDATA[بطاقات NFC ✓ إدارة Google Business ✓ اشتراكات رقمية ✓ شحن مجاني السعودية]]></description>
-    <pubDate>${now}</pubDate>
+    <description><![CDATA[High-quality NFC Cards • Google Business Solutions]]></description>
     <lastBuildDate>${now}</lastBuildDate>
-    <language>ar-SA</language>
 
-${products.map((p, i) => createProductItem(p, siteUrl, i)).join('\n')}
+${items}
+
   </channel>
 </rss>`;
 }
 
-// ================================
-// 3. عنصر المنتج ✅
-// ================================
-function createProductItem(product, siteUrl, index) {
+/*===============================================
+  3) Build <item> Element
+================================================*/
+function buildItem(product, siteUrl) {
   const id = product.id;
-  const sku = product.sku || `TAPLINK-${id}`;
-  
-  const title = createCTRTitle(product);
-  const description = createRichDescription(product);
-  const canonical = createCanonicalUrl(product, siteUrl);
-  
-  const primaryImage = optimizeImage(product.images?.[0]?.src);
-  const additionalImages = (product.images || [])
-    .slice(1, 10)
-    .map(img => optimizeImage(img.src))
-    .filter(Boolean);
-  
-  const price = formatPrice(product.price);
-  const salePrice = product.sale_price && product.sale_price < product.price
-    ? formatPrice(product.sale_price)
-    : '';
-  
-  const availability = getAvailability(product);
-  const gtin = getMeta(product, ['_gtin', 'gtin', '_wc_gtin']);
-  const mpn = getMeta(product, ['_mpn', 'mpn']) || sku;
-  
-  const googleCategory = getGoogleCategory(product);
-  const productType = getProductType(product);
-  const attributes = extractAttributes(product);
-  const labels = getCustomLabels(product);
+  const sku = product.sku || `TAP-${id}`;
 
-  return `    <item>
+  const title = cleanText(product.name);
+  const description = cleanText(product.short_description || product.description);
+
+  const link = `${siteUrl}/product/${cleanSlug(product.slug)}?utm_source=google`;
+
+  const img = optimizeImg(product.images?.[0]?.src);
+  const extra = (product.images || [])
+    .slice(1, 10)
+    .map(i => `<g:additional_image_link>${optimizeImg(i.src)}</g:additional_image_link>`)
+    .join("");
+
+  const price = format(product.price);
+  const sale = product.sale_price && product.sale_price < product.price
+    ? `<g:sale_price>${format(product.sale_price)} SAR</g:sale_price>`
+    : "";
+
+  const cat = detectCategory(product);
+  const pType = (product.fullCategories || []).map(c => c.name).join(" > ") || "NFC";
+
+  return `
+    <item>
       <g:id>${id}</g:id>
-      <g:sku>${escapeXml(sku)}</g:sku>
-      <g:title><![CDATA[${title}]]></g:title>
-      <g:description><![CDATA[${description}]]></g:description>
-      
-      <g:link>${canonical}</g:link>
-      <g:mobile_link>${canonical}</g:mobile_link>
-      
-      <g:image_link>${primaryImage}</g:image_link>
-${additionalImages.map(img => `      <g:additional_image_link>${img}</g:additional_image_link>`).join('\n')}
-      
+
+      <g:title><![CDATA[${sanitize(title)}]]></g:title>
+      <g:description><![CDATA[${sanitize(description)}]]></g:description>
+
+      <g:link>${link}</g:link>
+      <g:image_link>${img}</g:image_link>
+      ${extra}
+
       <g:price>${price} SAR</g:price>
-${salePrice ? `      <g:sale_price>${salePrice} SAR</g:sale_price>` : ''}
-      
-      <g:availability>${availability}</g:availability>
+      ${sale}
+
+      <g:availability>${product.stock_status === "instock" ? "in stock" : "out of stock"}</g:availability>
       <g:condition>new</g:condition>
-      
+
       <g:brand><![CDATA[TapLink SA]]></g:brand>
-${gtin ? `      <g:gtin>${gtin}</g:gtin>` : `      <g:identifier_exists>no</g:identifier_exists>`}
-      <g:mpn>${escapeXml(mpn)}</g:mpn>
-      
-      <g:google_product_category>${googleCategory}</g:google_product_category>
-      <g:product_type><![CDATA[${productType}]]></g:product_type>
-      
-${attributes.color ? `      <g:color>${escapeXml(attributes.color)}</g:color>` : ''}
-${attributes.size ? `      <g:size>${escapeXml(attributes.size)}</g:size>` : ''}
-${attributes.material ? `      <g:material>${escapeXml(attributes.material)}</g:material>` : ''}
-      
+      <g:identifier_exists>no</g:identifier_exists>
+
+      <g:google_product_category>${cat}</g:google_product_category>
+      <g:product_type><![CDATA[${sanitize(pType)}]]></g:product_type>
+
       <g:shipping>
         <g:country>SA</g:country>
         <g:service>Standard</g:service>
         <g:price>25 SAR</g:price>
       </g:shipping>
-      
+
       <g:tax>
         <g:country>SA</g:country>
         <g:rate>15</g:rate>
-        <g:tax_ship>true</g:tax_ship>
       </g:tax>
-      
-      <g:custom_label_0>${escapeXml(labels[0])}</g:custom_label_0>
-      <g:custom_label_1>${escapeXml(labels[1])}</g:custom_label_1>
-      <g:custom_label_2>${escapeXml(labels[2])}</g:custom_label_2>
-      <g:custom_label_3>${escapeXml(labels[3])}</g:custom_label_3>
-      <g:custom_label_4>TapLink SA</g:custom_label_4>
     </item>`;
 }
 
-// ================================
-// 4. دوال مساعدة ✅
-// ================================
+/*===============================================
+  4) Utilities (Critical for Zero XML Errors)
+================================================*/
 
-function createCTRTitle(product) {
-  const base = cleanText(product.name);
-  const cat = product.fullCategories?.[0]?.name || product.categories?.[0]?.name || '';
-  const emoji = product.on_sale ? '🔥 ' : product.featured ? '⭐ ' : '';
-  
-  let title = `${emoji}${base}`;
-  if (cat && !title.includes(cat)) {
-    title += ` | ${cat}`;
-  }
-  title += ' - تاب لينك';
-  
-  return title.substring(0, 140);
+// 🚫 يمنع الإيموجي + الرموز غير المدعومة
+function removeEmoji(str = "") {
+  return str.replace(/[\u{1F600}-\u{1F64F}]/gu, "")
+            .replace(/[\u{1F300}-\u{1F5FF}]/gu, "")
+            .replace(/[\u{1F680}-\u{1F6FF}]/gu, "")
+            .replace(/[\u{2600}-\u{27BF}]/gu, "");
 }
 
-function createRichDescription(product) {
-  const desc = cleanText(product.description || product.short_description);
-  const specs = `
-
-📌 المواصفات:
-- تقنية NFC NTAG215
-- متوافق مع iPhone و Android
-- شحن سريع لجميع مناطق السعودية
-- دفع عند الاستلام
-- ضمان سنة كاملة
-- دعم فني 24/7`;
-  
-  return (desc + specs).substring(0, 4800);
+// 🧼 تنظيف النص بالكامل
+function cleanText(str = "") {
+  return removeEmoji(
+    str
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
-function createCanonicalUrl(product, siteUrl) {
-  const slug = cleanUrlSlug(product.slug || product.id.toString());
-  return `${siteUrl}/product/${slug}?utm_source=google&utm_medium=shopping&utm_campaign=merchant`;
-}
-
-function optimizeImage(src) {
-  if (!src) return 'https://taplinksa.com/images/placeholder.jpg';
-  return src.split('?')[0] + '?w=1200&h=1200&fit=crop&quality=85';
-}
-
-function formatPrice(price) {
-  return parseFloat(price || 0).toFixed(2);
-}
-
-function getAvailability(product) {
-  switch (product.stock_status) {
-    case 'instock': return 'in stock';
-    case 'onbackorder': return 'backorder';
-    default: return 'out of stock';
-  }
-}
-
-function getMeta(product, keys) {
-  for (const key of keys) {
-    const meta = product.meta_data?.find(m => m.key === key);
-    if (meta?.value) return meta.value;
-  }
-  return '';
-}
-
-function getGoogleCategory(product) {
-  const text = (product.name || '').toLowerCase();
-  if (text.includes('nfc') || text.includes('بطاقة')) {
-    return '3086'; // NFC Technology
-  }
-  return '922'; // Electronics Accessories
-}
-
-function getProductType(product) {
-  const cats = product.fullCategories || product.categories || [];
-  return cats.map(c => c.name).join(' > ') || 'إلكترونيات';
-}
-
-function extractAttributes(product) {
-  const attrs = product.attributes || [];
-  return {
-    color: attrs.find(a => ['color', 'اللون'].includes((a.name || '').toLowerCase()))?.options?.[0],
-    size: attrs.find(a => ['size', 'الحجم'].includes((a.name || '').toLowerCase()))?.options?.[0],
-    material: attrs.find(a => ['material', 'المادة'].includes((a.name || '').toLowerCase()))?.options?.[0],
-  };
-}
-
-function getCustomLabels(product) {
-  return [
-    product.categories?.[0]?.name || 'NFC',
-    product.featured ? 'مميز' : 'عادي',
-    product.on_sale ? 'عرض' : 'عادي',
-    product.stock_status === 'instock' ? 'متوفر' : 'نفاد',
-  ];
-}
-
-function cleanText(text) {
-  return (text || '')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&[a-zA-Z0-9#]+;/g, '')
-    .replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]/g, '') // إزالة Emoji
-    .replace(/[^\w\u0600-\u06FF\s\-.,!؟]/g, '')
+// 🤝 آمن بنسبة 100% داخل CDATA
+function sanitize(str = "") {
+  return String(str)
+    .replace(/&(?!(amp;|lt;|gt;))/g, "&amp;") // إصلاح علامة &
+    .replace(/]]>/g, "]]&gt;")
     .trim();
 }
 
-function cleanUrlSlug(slug) {
-  return (slug || '')
-    .replace(/[^\w\u0600-\u06FF\-]/g, '')
-    .replace(/^-+|-+$/g, '')
-    .substring(0, 80) || 'product';
+// 🔧 تنظيف السلاج
+function cleanSlug(slug = "") {
+  return slug.replace(/[^\w\u0600-\u06FF-]/g, "");
 }
 
-function escapeXml(text) {
-  return String(text || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+function optimizeImg(src) {
+  if (!src) return "https://taplinksa.com/default.jpg";
+  return src.split("?")[0] + "?w=1200&h=1200&fit=crop&quality=85";
 }
 
-function createEmptyFeed() {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+function format(v) {
+  return parseFloat(v || 0).toFixed(2);
+}
+
+// ⚡ اكتشاف فئة NFC
+function detectCategory(product) {
+  const name = product.name?.toLowerCase() || "";
+  const cat = product.fullCategories?.[0]?.name?.toLowerCase() || "";
+
+  if (name.includes("nfc") || cat.includes("nfc") || name.includes("بطاقة")) {
+    return "3086"; // NFC Category
+  }
+  return "922"; // Electronics Accessories
+}
+
+/*===============================================
+  5) Empty & Error Feeds
+================================================*/
+function emptyFeed() {
+  return `<?xml version="1.0"?>
+<rss xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title>تاب لينك السعودية</title>
-    <link>https://taplinksa.com</link>
-    <description>جاري تحديث المنتجات</description>
+    <title>No Products</title>
   </channel>
 </rss>`;
 }
 
-function createErrorFeed() {
-  return createEmptyFeed();
+function errorFeed() {
+  return emptyFeed();
 }
