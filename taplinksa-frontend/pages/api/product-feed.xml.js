@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
-  hannel>
+  channel>
     <title>تاب لينك السعودية</title>
     <link>https://taplinksa.com</link>
     <description>بطاقات NFC الذكية وحلول التسويق الرقمي</description>
