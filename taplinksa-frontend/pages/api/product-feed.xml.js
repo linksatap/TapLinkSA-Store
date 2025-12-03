@@ -200,6 +200,6 @@ function detectCategory(product) {
 function errorFeed() {
   return `<?xml version="1.0"?>
 <rss xmlns:g="http://base.google.com/ns/1.0">
-  hannel><title>Error</title></channel>
+  <channel><title>Error</title></channel>
 </rss>`;
 }
