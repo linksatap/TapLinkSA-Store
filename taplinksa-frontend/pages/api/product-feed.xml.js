@@ -1,6 +1,4 @@
-// TapLink SA – Google Merchant PRO Feed (Next.js Safe Version)
-// Clean – Stable – No Unicode Errors – No Runtime Issues
-
+// TapLink SA – Google Merchant PRO Feed (إصلاح الروابط النهائي)
 import axios from "axios";
 
 export default async function handler(req, res) {
@@ -8,7 +6,6 @@ export default async function handler(req, res) {
     console.log("⚡ Generating PRO Merchant Feed...");
 
     const products = await fetchProducts();
-
     const xml = buildFeed(products);
 
     res.setHeader("Content-Type", "application/xml; charset=utf-8");
@@ -21,9 +18,6 @@ export default async function handler(req, res) {
   }
 }
 
-/* =======================================================
-   1) Fetch WooCommerce Products (Safe & Clean)
-======================================================= */
 async function fetchProducts() {
   try {
     const r = await axios.get(
@@ -46,9 +40,6 @@ async function fetchProducts() {
   }
 }
 
-/* =======================================================
-   2) Build Feed
-======================================================= */
 function buildFeed(products) {
   const siteUrl = "https://taplinksa.com";
   const now = new Date().toISOString();
@@ -69,51 +60,33 @@ ${items}
 </rss>`;
 }
 
-/* =======================================================
-   3) Build Each Product Item – PRO Optimized
-======================================================= */
 function buildItem(product, siteUrl) {
   const id = product.id;
-
+  
   /* ------------------------------------------
-     (1) Safe Link – يدعم Slug عربي أو مشفهّر
+     ✅ إصلاح الرابط: /shop/ + slug صحيح
   ------------------------------------------ */
-  const safeSlug = cleanSlug(product.slug || id.toString());
-  const link = `${siteUrl}/product/${safeSlug}`;
+  const productUrl = getProductUrl(product, siteUrl);
 
-  /* ------------------------------------------
-     (2) عنوان محسّن CTR (مهم لضرب الحملات)
-  ------------------------------------------ */
   const title = makeTitle(product);
-
-  /* ------------------------------------------
-     (3) وصف قوي بدون HTML – Google Friendly
-  ------------------------------------------ */
   const description = makeDescription(product);
 
-  /* ------------------------------------------
-     (4) صور – الصورة الأساسية فقط (Google يفضلها)
-  ------------------------------------------ */
-  const image = product.images?.[0]?.src || `${siteUrl}/placeholder.jpg`;
+  const image = getDirectImageUrl(product.images?.[0]?.src);
+  
+  const additionalImages = (product.images || [])
+    .slice(1, 10)
+    .map(img => getDirectImageUrl(img.src))
+    .filter(Boolean);
 
-  /* ------------------------------------------
-     (5) السعر
-  ------------------------------------------ */
   const price = format(product.price);
   const salePrice =
     product.sale_price && product.sale_price < product.price
       ? format(product.sale_price)
       : "";
 
-  /* ------------------------------------------
-     (6) التوفر
-  ------------------------------------------ */
   const availability =
     product.stock_status === "instock" ? "in stock" : "out of stock";
 
-  /* ------------------------------------------
-     (7) Google Product Category
-  ------------------------------------------ */
   const googleCategory = detectCategory(product);
 
   return `
@@ -121,8 +94,10 @@ function buildItem(product, siteUrl) {
       <g:id>${id}</g:id>
       <g:title><![CDATA[${title}]]></g:title>
       <g:description><![CDATA[${description}]]></g:description>
-      <g:link>${link}</g:link>
+      <g:link>${productUrl}</g:link>
+      
       <g:image_link>${image}</g:image_link>
+${additionalImages.map(img => `      <g:additional_image_link>${img}</g:additional_image_link>`).join('\n')}
 
       <g:price>${price} SAR</g:price>
       ${salePrice ? `<g:sale_price>${salePrice} SAR</g:sale_price>` : ""}
@@ -148,13 +123,40 @@ function buildItem(product, siteUrl) {
 }
 
 /* =======================================================
-   4) Helpers – Clean / Safe / Guaranteed
+   ✅ دالة رابط المنتج الصحيح
 ======================================================= */
+function getProductUrl(product, siteUrl) {
+  // إذا كان هناك permalink كامل من WooCommerce
+  if (product.permalink) {
+    return product.permalink;
+  }
+  
+  // ✅ استخدام /shop/ بدلاً من /product/
+  const slug = product.slug || product.id.toString();
+  
+  // ✅ encodeURIComponent بدون إزالة %
+  const encodedSlug = encodeURIComponent(slug);
+  
+  return `${siteUrl}/shop/${encodedSlug}`;
+}
 
-// عناوين CTR عالية
+function getDirectImageUrl(imageSrc) {
+  if (!imageSrc) {
+    return "https://cms.taplinksa.com/wp-content/uploads/placeholder-nfc.jpg";
+  }
+
+  try {
+    let cleanUrl = imageSrc.split('?')[0];
+    cleanUrl = cleanUrl.replace(/-\d+x\d+(\.[^.]+)$/, '$1');
+    return cleanUrl;
+    
+  } catch (e) {
+    return "https://cms.taplinksa.com/wp-content/uploads/placeholder-nfc.jpg";
+  }
+}
+
 function makeTitle(product) {
   const name = cleanText(product.name);
-
   const base =
     product.on_sale
       ? `🔥 عرض خاص ${name}`
@@ -165,7 +167,6 @@ function makeTitle(product) {
   return `${base} | TapLink SA`.substring(0, 140);
 }
 
-// وصف Google Friendly
 function makeDescription(product) {
   const raw =
     product.short_description ||
@@ -176,12 +177,6 @@ function makeDescription(product) {
   return cleanText(raw).substring(0, 4000);
 }
 
-// Clean Slug without breaking Arabic
-function cleanSlug(slug) {
-  return encodeURIComponent(slug).replace(/%/g, "");
-}
-
-// Clean Text safely
 function cleanText(str = "") {
   return String(str)
     .replace(/<[^>]*>/g, "")
@@ -189,12 +184,10 @@ function cleanText(str = "") {
     .trim();
 }
 
-// Price formatting
 function format(num) {
   return parseFloat(num || 0).toFixed(2);
 }
 
-// Detect Google Category
 function detectCategory(product) {
   const name = (product.name || "").toLowerCase();
 
@@ -204,12 +197,9 @@ function detectCategory(product) {
   return "922";
 }
 
-/* =======================================================
-   5) Error Feed
-======================================================= */
 function errorFeed() {
   return `<?xml version="1.0"?>
 <rss xmlns:g="http://base.google.com/ns/1.0">
-  <channel><title>Error</title></channel>
+  hannel><title>Error</title></channel>
 </rss>`;
 }
