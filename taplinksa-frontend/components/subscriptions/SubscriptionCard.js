@@ -58,7 +58,10 @@ export default function SubscriptionCard({ subscription }) {
       className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 h-full flex flex-col"
     >
       {/* Header with Tool Icon/Image */}
-      <div className="relative h-48 bg-gradient-to-br from-gold via-yellow-400 to-yellow-500 p-6 flex items-center justify-center">
+      <div className="relative aspect-square w-full max-w-[600px] 
+bg-gradient-to-br from-gold via-yellow-400 to-yellow-500 
+p-6 flex items-center justify-center mx-auto rounded-2xl">
+
         {subscription.images && subscription.images.length > 0 ? (
           <div className="relative w-full h-full">
             <Image
