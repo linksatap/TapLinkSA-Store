@@ -162,7 +162,7 @@ function buildShipping(isDigital) {
       <g:shipping>
         <g:country>SA</g:country>
         <g:service>Standard</g:service>
-        <g:price>25 SAR</g:price>
+        <g:price>0 SAR</g:price>
       </g:shipping>`;
   }
 }
