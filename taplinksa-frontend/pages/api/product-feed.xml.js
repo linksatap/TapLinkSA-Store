@@ -145,7 +145,7 @@ function getDirectImageUrl(imageSrc) {
 
 function makeTitle(product) {
   const name = cleanText(product.name);
-  return `${name} | TapLink SA`.substring(0, 140);
+  return `${name} | متجر تاب لينك`.substring(0, 140);
 }
 
 function makeDescription(product) {
