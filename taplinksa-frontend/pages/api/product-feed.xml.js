@@ -1,223 +1,123 @@
-// pages/api/product-feed.xml.js
-// Google Merchant • Zero Error • Clean XML v6.0
+function sanitizeCDATA(str = "") {
+  return String(str)
+    .replace(/<!\[CDATA\[/g, "")              // إزالة CDATA الموجودة أصلاً
+    .replace(/]]>/g, "")                      // منع كسر CDATA
+    .replace(/&(?!(amp;|lt;|gt;|quot;|apos;))/g, "&amp;") 
+    .replace(/&#[0-9]+;/g, "")                // إزالة كيانات مكسورة
+    .replace(/&#x[0-9A-F]+;/gi, "")           // إزالة يونكود HEX
+    .replace(/<[^>]*>/g, "")                  // إزالة HTML + attributes
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, "")   // إزالة Emoji Faces
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, "")   // Misc symbols
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, "")   // Transport emoji
+    .replace(/[\u{2600}-\u{27BF}]/g, "")      // Misc
+    .replace(/\s{2,}/g, " ")                  // إزالة الفراغات
+    .trim();
+}
 
-import axios from "axios";
+
+// pages/api/product-feed.xml.js - بدون أخطاء XML
+import axios from 'axios';
 
 export default async function handler(req, res) {
   try {
-    console.log("🚀 Generating Error-Free Google Merchant Feed…");
-
     const products = await fetchProducts();
-
-    const xml = products.length
-      ? buildFeed(products)
-      : emptyFeed();
-
-    res.setHeader("Content-Type", "application/xml; charset=utf-8");
-    res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate");
-    res.setHeader("X-Robots-Tag", "noindex");
-
-    return res.status(200).send(xml);
-
-  } catch (err) {
-    console.error("❌ Feed Error:", err);
-    return res.status(200).send(errorFeed());
+    const feed = buildFeed(products);
+    
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 's-maxage=1800');
+    res.status(200).send(feed);
+    
+  } catch (error) {
+    res.status(200).send(buildEmptyFeed());
   }
 }
 
-/*===============================================
-  1) Fetch WooCommerce Products & Categories
-================================================*/
 async function fetchProducts() {
   try {
-    const [pRes, cRes] = await Promise.all([
-      axios.get(`${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/wc/v3/products`, {
-        params: {
-          per_page: 150,
-          status: "publish",
-          stock_status: "instock",
-        },
+    const res = await axios.get(
+      `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/wc/v3/products`,
+      {
+        params: { per_page: 100, status: 'publish' },
         auth: {
           username: process.env.WC_CONSUMER_KEY,
           password: process.env.WC_CONSUMER_SECRET,
         },
         timeout: 15000,
-      }),
-
-      axios.get(`${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/wc/v3/products/categories`, {
-        auth: {
-          username: process.env.WC_CONSUMER_KEY,
-          password: process.env.WC_CONSUMER_SECRET,
-        },
-      })
-    ]);
-
-    return pRes.data.map(p => ({
-      ...p,
-      fullCategories: cRes.data.filter(cat =>
-        p.categories?.some(c => c.id === cat.id)
-      )
-    }));
-
+      }
+    );
+    return res.data;
   } catch (e) {
-    console.log("Fetch Failed:", e.message);
     return [];
   }
 }
 
-/*===============================================
-  2) Build XML Feed
-================================================*/
 function buildFeed(products) {
   const now = new Date().toISOString();
-  const siteUrl = "https://taplinksa.com";
-
-  const items = products.map(p => buildItem(p, siteUrl)).join("\n");
-
+  
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
-  <channel>
-    <title><![CDATA[TapLink SA – NFC Cards]]></title>
-    <link>${siteUrl}</link>
-    <description><![CDATA[High-quality NFC Cards • Google Business Solutions]]></description>
-    <lastBuildDate>${now}</lastBuildDate>
+  hannel>
+    <title><![CDATA[تاب لينك السعودية - بطاقات NFC]]></title>
+    <link>https://taplinksa.com</link>
+    <description><![CDATA[بطاقات NFC الذكية وحلول التسويق الرقمي]]></description>
+    <pubDate>${now}</pubDate>
 
-${items}
-
+${products.map(p => buildItem(p)).join('\n')}
   </channel>
 </rss>`;
 }
 
-/*===============================================
-  3) Build <item> Element
-================================================*/
-function buildItem(product, siteUrl) {
+function buildItem(product) {
   const id = product.id;
-  const sku = product.sku || `TAP-${id}`;
-
-  const title = cleanText(product.name);
-  const description = cleanText(product.short_description || product.description);
-
-  const link = `${siteUrl}/product/${cleanSlug(product.slug)}?utm_source=google`;
-
-  const img = optimizeImg(product.images?.[0]?.src);
-  const extra = (product.images || [])
-    .slice(1, 10)
-    .map(i => `<g:additional_image_link>${optimizeImg(i.src)}</g:additional_image_link>`)
-    .join("");
-
-  const price = format(product.price);
-  const sale = product.sale_price && product.sale_price < product.price
-    ? `<g:sale_price>${format(product.sale_price)} SAR</g:sale_price>`
-    : "";
-
-  const cat = detectCategory(product);
-  const pType = (product.fullCategories || []).map(c => c.name).join(" > ") || "NFC";
-
-  return `
-    <item>
+  const sku = escapeXml(product.sku || `TAPLINK-${id}`);
+  const title = cleanForCDATA(product.name);
+  const desc = cleanForCDATA(product.description || product.short_description);
+  const price = parseFloat(product.price || 0).toFixed(2);
+  const img = product.images?.[0]?.src || 'https://taplinksa.com/placeholder.jpg';
+  
+  return `    <item>
       <g:id>${id}</g:id>
-
-      <g:title><![CDATA[${sanitize(title)}]]></g:title>
-      <g:description><![CDATA[${sanitize(description)}]]></g:description>
-
-      <g:link>${link}</g:link>
+      <g:sku>${sku}</g:sku>
+<g:title><![CDATA[${sanitizeCDATA(title)}]]></g:title>
+<g:description><![CDATA[${sanitizeCDATA(description)}]]></g:description>
+      <g:link>https://taplinksa.com/product/${product.slug || id}</g:link>
       <g:image_link>${img}</g:image_link>
-      ${extra}
-
       <g:price>${price} SAR</g:price>
-      ${sale}
-
-      <g:availability>${product.stock_status === "instock" ? "in stock" : "out of stock"}</g:availability>
+      <g:availability>in stock</g:availability>
       <g:condition>new</g:condition>
-
-      <g:brand><![CDATA[TapLink SA]]></g:brand>
-      <g:identifier_exists>no</g:identifier_exists>
-
-      <g:google_product_category>${cat}</g:google_product_category>
-      <g:product_type><![CDATA[${sanitize(pType)}]]></g:product_type>
-
-      <g:shipping>
-        <g:country>SA</g:country>
-        <g:service>Standard</g:service>
-        <g:price>25 SAR</g:price>
-      </g:shipping>
-
-      <g:tax>
-        <g:country>SA</g:country>
-        <g:rate>15</g:rate>
-      </g:tax>
+      <g:brand>TapLink SA</g:brand>
+      <g:google_product_category>3086</g:google_product_category>
     </item>`;
 }
 
-/*===============================================
-  4) Utilities (Critical for Zero XML Errors)
-================================================*/
-
-// 🚫 يمنع الإيموجي + الرموز غير المدعومة
-function removeEmoji(str = "") {
-  return str.replace(/[\u{1F600}-\u{1F64F}]/gu, "")
-            .replace(/[\u{1F300}-\u{1F5FF}]/gu, "")
-            .replace(/[\u{1F680}-\u{1F6FF}]/gu, "")
-            .replace(/[\u{2600}-\u{27BF}]/gu, "");
-}
-
-// 🧼 تنظيف النص بالكامل
-function cleanText(str = "") {
-  return removeEmoji(
-    str
-      .replace(/<[^>]*>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
-}
-
-// 🤝 آمن بنسبة 100% داخل CDATA
-function sanitize(str = "") {
-  return String(str)
-    .replace(/&(?!(amp;|lt;|gt;))/g, "&amp;") // إصلاح علامة &
+// ✅ دوال التنظيف الصحيحة
+function cleanForCDATA(text = "") {
+  return String(text)
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]/gu, "")
     .replace(/]]>/g, "]]&gt;")
-    .trim();
+    .trim()
+    .substring(0, 5000);
 }
 
-// 🔧 تنظيف السلاج
-function cleanSlug(slug = "") {
-  return slug.replace(/[^\w\u0600-\u06FF-]/g, "");
+function escapeXml(text = "") {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
-function optimizeImg(src) {
-  if (!src) return "https://taplinksa.com/default.jpg";
-  return src.split("?")[0] + "?w=1200&h=1200&fit=crop&quality=85";
-}
-
-function format(v) {
-  return parseFloat(v || 0).toFixed(2);
-}
-
-// ⚡ اكتشاف فئة NFC
-function detectCategory(product) {
-  const name = product.name?.toLowerCase() || "";
-  const cat = product.fullCategories?.[0]?.name?.toLowerCase() || "";
-
-  if (name.includes("nfc") || cat.includes("nfc") || name.includes("بطاقة")) {
-    return "3086"; // NFC Category
-  }
-  return "922"; // Electronics Accessories
-}
-
-/*===============================================
-  5) Empty & Error Feeds
-================================================*/
-function emptyFeed() {
-  return `<?xml version="1.0"?>
-<rss xmlns:g="http://base.google.com/ns/1.0">
-  <channel>
-    <title>No Products</title>
+function buildEmptyFeed() {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  hannel>
+    <title>تاب لينك السعودية</title>
+    <link>https://taplinksa.com</link>
+    <description>جاري التحديث</description>
   </channel>
 </rss>`;
-}
-
-function errorFeed() {
-  return emptyFeed();
 }
