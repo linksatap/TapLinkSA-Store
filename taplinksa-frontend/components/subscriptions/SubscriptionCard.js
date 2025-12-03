@@ -178,7 +178,7 @@ p-6 flex items-center justify-center mx-auto rounded-2xl">
               href={`/shop/${subscription.slug}`}
               className="py-3 px-4 border-2 border-gold text-gold font-bold rounded-xl hover:bg-gold hover:text-dark transition-all"
             >
-              👁️
+              عرض المنتج
             </Link>
           </div>
         </div>
