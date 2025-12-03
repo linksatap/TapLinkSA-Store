@@ -64,7 +64,10 @@ export default function SubscriptionsPage() {
   )];
 
   return (
-    <Layout title="الاشتراكات الرقمية | تاب لينك السعودية">
+    <Layout title="الاشتراكات الرقمية الرسمية 2025 | أفضل الأسعار - متجر تاب لينك "
+      description="اشتراكات رسمية 100% ✓ ChatGPT Plus ✓ Canva Pro ✓ Midjourney ✓ سورسات تيليجرام ✓ تفعيل فوري ✓ دعم 24/7 في بريدة والقصيم"
+      keywords="اشتراكات رقمية, ChatGPT اشتراك, Canva Pro,نيتفليكس,Netflix, Midjourney اشتراك, سورسات تيليجرام, اشتراكات رسمية, بريدة, القصيم, تاب لينك"
+      ogImage="/images/subscriptions-og.jpg">
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-gold via-yellow-400 to-yellow-500 py-20 mt-20">
         <div className="container-custom">
