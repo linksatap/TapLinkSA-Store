@@ -4,8 +4,8 @@ import Footer from './Footer';
 
 export default function Layout({ 
   children, 
-  title = 'تاب لينك السعودية',
-  description = 'بطاقات NFC الذكية وحلول التسويق الرقمي في بريدة - القصيم',
+  title = 'متجر تاب لينك ',
+  description = 'بطاقات NFC الذكية وحلول التسويق الرقمي في  المملكة... ',
   keywords = 'بطاقات NFC, بطاقات ذكية, تسويق رقمي, بريدة',
   ogImage = '/og-image.jpg'
 }) {
@@ -37,7 +37,7 @@ export default function Layout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'LocalBusiness',
-              name: 'TapLink SA',
+              name: 'متجر تاب لينك ',
               image: `${siteUrl}${ogImage}`,
               '@id': siteUrl,
               url: siteUrl,
