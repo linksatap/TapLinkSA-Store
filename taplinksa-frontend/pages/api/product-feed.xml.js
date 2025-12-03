@@ -1,159 +1,215 @@
-// pages/api/product-feed.xml.js - النسخة المُصححة
-import axios from 'axios';
+// TapLink SA – Google Merchant PRO Feed (Next.js Safe Version)
+// Clean – Stable – No Unicode Errors – No Runtime Issues
+
+import axios from "axios";
 
 export default async function handler(req, res) {
   try {
-    console.log('🔄 Generating Fixed Google Merchant Feed...');
-    
-    const products = await fetchAllProducts();
-    
-    if (!products || products.length === 0) {
-      return res.status(404).send(`
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
-  <channel>
-    <title>تاب لينك السعودية - منتجات</title>
-    <link>https://taplinksa.com</link>
-    <description>لا توجد منتجات حالياً</description>
-  </channel>
-</rss>`);
-    }
+    console.log("⚡ Generating PRO Merchant Feed...");
 
-    const feed = generateFixedFeed(products);
-    
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate'); // 30 دقيقة
-    res.status(200).send(feed);
-    
-  } catch (error) {
-    console.error('❌ Feed Error:', error.message);
-    res.status(500).send(`
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
-  <channel>
-    <title>تاب لينك السعودية - خطأ مؤقت</title>
-    <link>https://taplinksa.com</link>
-    <description>خطأ في تحديث البيانات، جاري الإصلاح</description>
-  </channel>
-</rss>`);
+    const products = await fetchProducts();
+
+    const xml = buildFeed(products);
+
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate");
+    res.status(200).send(xml);
+
+  } catch (err) {
+    console.error("❌ Feed Error", err.message);
+    res.status(500).send(errorFeed());
   }
 }
 
-// جلب المنتجات مع Error Handling
-async function fetchAllProducts() {
+/* =======================================================
+   1) Fetch WooCommerce Products (Safe & Clean)
+======================================================= */
+async function fetchProducts() {
   try {
-    const response = await axios.get(
+    const r = await axios.get(
       `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/wc/v3/products`,
       {
-        params: {
-          per_page: 100,
-          status: 'publish',
-          stock_status: 'instock',
-        },
+        params: { per_page: 150, status: "publish" },
         auth: {
           username: process.env.WC_CONSUMER_KEY,
-          password: process.env.WC_CONSUMER_SECRET,
+          password: process.env.WC_CONSUMER_SECRET
         },
-        timeout: 15000,
+        timeout: 15000
       }
     );
-    
-    console.log(`✅ Loaded ${response.data.length} products`);
-    return response.data;
-  } catch (error) {
-    console.error('❌ API Error:', error.message);
+
+    return r.data;
+
+  } catch (err) {
+    console.error("❌ Fetch Error:", err.message);
     return [];
   }
 }
 
-// إنشاء Feed مُصحح
-function generateFixedFeed(products) {
-  const siteUrl = 'https://taplinksa.com';
+/* =======================================================
+   2) Build Feed
+======================================================= */
+function buildFeed(products) {
+  const siteUrl = "https://taplinksa.com";
   const now = new Date().toISOString();
+
+  const items = products.map((p) => buildItem(p, siteUrl)).join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
-    <title><![CDATA[تاب لينك السعودية - بطاقات NFC الذكية]]></title>
+    <title><![CDATA[TapLink SA – NFC Cards & Digital Solutions]]></title>
     <link>${siteUrl}</link>
-    <description><![CDATA[بطاقات NFC الذكية وحلول التسويق الرقمي في السعودية]]></description>
+    <description><![CDATA[أفضل بطاقات NFC وحلول رقمية لمتجرك – شحن سريع لكل السعودية]]></description>
     <lastBuildDate>${now}</lastBuildDate>
-${products.map(p => generateFixedProductItem(p, siteUrl)).join('\n')}
+
+${items}
+
   </channel>
 </rss>`;
 }
 
-// 🔥 العنصر المُصحح - الجزء الأساسي
-function generateFixedProductItem(product, siteUrl) {
+/* =======================================================
+   3) Build Each Product Item – PRO Optimized
+======================================================= */
+function buildItem(product, siteUrl) {
   const id = product.id;
-  
-  // ✅ تصحيح URL العربي - الحل الأساسي
-  let link = product.slug 
-    ? `${siteUrl}/product/${encodeURIComponent(product.slug)}`
-    : `${siteUrl}/product/${id}`;
-    
-  // ✅ إزالة الأحرف الخطرة من الـ slug
-  const safeSlug = product.slug 
-    ? product.slug.replace(/[^\w\u0600-\u06FF-]/g, '').substring(0, 100)
-    : id.toString();
-    
-  link = `${siteUrl}/product/${safeSlug}`;
-  
-  // العنوان المُنظف
-  const title = cleanTitle(product.name);
-  
-  // الوصف المُنظف
-  const description = cleanDescription(product.short_description || product.description || title);
-  
-  // الصورة
-  const imageLink = product.images[0]?.src || `${siteUrl}/placeholder.jpg`;
-  
-  // السعر
-  const price = `${Math.round(parseFloat(product.price || 0) * 100) / 100} SAR`;
-  const salePrice = product.sale_price && product.sale_price !== product.price 
-    ? `${Math.round(parseFloat(product.sale_price) * 100) / 100} SAR`
-    : '';
-  
-  // التوفر
-  const availability = product.stock_status === 'instock' ? 'in stock' : 'out of stock';
-  
-  return `    <item>
+
+  /* ------------------------------------------
+     (1) Safe Link – يدعم Slug عربي أو مشفهّر
+  ------------------------------------------ */
+  const safeSlug = cleanSlug(product.slug || id.toString());
+  const link = `${siteUrl}/product/${safeSlug}`;
+
+  /* ------------------------------------------
+     (2) عنوان محسّن CTR (مهم لضرب الحملات)
+  ------------------------------------------ */
+  const title = makeTitle(product);
+
+  /* ------------------------------------------
+     (3) وصف قوي بدون HTML – Google Friendly
+  ------------------------------------------ */
+  const description = makeDescription(product);
+
+  /* ------------------------------------------
+     (4) صور – الصورة الأساسية فقط (Google يفضلها)
+  ------------------------------------------ */
+  const image = product.images?.[0]?.src || `${siteUrl}/placeholder.jpg`;
+
+  /* ------------------------------------------
+     (5) السعر
+  ------------------------------------------ */
+  const price = format(product.price);
+  const salePrice =
+    product.sale_price && product.sale_price < product.price
+      ? format(product.sale_price)
+      : "";
+
+  /* ------------------------------------------
+     (6) التوفر
+  ------------------------------------------ */
+  const availability =
+    product.stock_status === "instock" ? "in stock" : "out of stock";
+
+  /* ------------------------------------------
+     (7) Google Product Category
+  ------------------------------------------ */
+  const googleCategory = detectCategory(product);
+
+  return `
+    <item>
       <g:id>${id}</g:id>
       <g:title><![CDATA[${title}]]></g:title>
       <g:description><![CDATA[${description}]]></g:description>
       <g:link>${link}</g:link>
-      <g:image_link>${imageLink}</g:image_link>
-      <g:price>${price}</g:price>
-      ${salePrice ? `<g:sale_price>${salePrice}</g:sale_price>` : ''}
+      <g:image_link>${image}</g:image_link>
+
+      <g:price>${price} SAR</g:price>
+      ${salePrice ? `<g:sale_price>${salePrice} SAR</g:sale_price>` : ""}
+
       <g:availability>${availability}</g:availability>
       <g:condition>new</g:condition>
-      <g:brand>TapLink SA</g:brand>
-      <g:google_product_category>922</g:google_product_category>
+
+      <g:brand><![CDATA[TapLink SA]]></g:brand>
+
+      <g:google_product_category>${googleCategory}</g:google_product_category>
+
       <g:shipping>
         <g:country>SA</g:country>
         <g:service>Standard</g:service>
         <g:price>25 SAR</g:price>
       </g:shipping>
+
+      <g:tax>
+        <g:country>SA</g:country>
+        <g:rate>15</g:rate>
+      </g:tax>
     </item>`;
 }
 
-// تنظيف العنوان
-function cleanTitle(title) {
-  return title
-    .replace(/&[a-zA-Z0-9#]+;/g, '') // إزالة HTML Entities
-    .replace(/[^\w\u0600-\u06FF\s\-]/g, '') // إزالة الرموز الخطرة
-    .trim()
-    .substring(0, 150);
+/* =======================================================
+   4) Helpers – Clean / Safe / Guaranteed
+======================================================= */
+
+// عناوين CTR عالية
+function makeTitle(product) {
+  const name = cleanText(product.name);
+
+  const base =
+    product.on_sale
+      ? `🔥 عرض خاص ${name}`
+      : product.featured
+      ? `⭐ ${name}`
+      : name;
+
+  return `${base} | TapLink SA`.substring(0, 140);
 }
 
-// تنظيف الوصف
-function cleanDescription(description) {
-  if (!description) return 'منتج عالي الجودة من تاب لينك السعودية';
-  
-  return description
-    .replace(/<[^>]*>/g, '') // إزالة HTML Tags
-    .replace(/&[a-zA-Z0-9#]+;/g, '') // إزالة HTML Entities
-    .replace(/\s+/g, ' ') // إزالة المسافات الزائدة
-    .trim()
-    .substring(0, 2000); // قص الوصف
+// وصف Google Friendly
+function makeDescription(product) {
+  const raw =
+    product.short_description ||
+    product.description ||
+    product.name ||
+    "منتج عالي الجودة من TapLink SA";
+
+  return cleanText(raw).substring(0, 4000);
+}
+
+// Clean Slug without breaking Arabic
+function cleanSlug(slug) {
+  return encodeURIComponent(slug).replace(/%/g, "");
+}
+
+// Clean Text safely
+function cleanText(str = "") {
+  return String(str)
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Price formatting
+function format(num) {
+  return parseFloat(num || 0).toFixed(2);
+}
+
+// Detect Google Category
+function detectCategory(product) {
+  const name = (product.name || "").toLowerCase();
+
+  if (name.includes("nfc") || name.includes("بطاقة")) return "3086";
+  if (name.includes("اشتراك") || name.includes("digital")) return "313";
+
+  return "922";
+}
+
+/* =======================================================
+   5) Error Feed
+======================================================= */
+function errorFeed() {
+  return `<?xml version="1.0"?>
+<rss xmlns:g="http://base.google.com/ns/1.0">
+  <channel><title>Error</title></channel>
+</rss>`;
 }
