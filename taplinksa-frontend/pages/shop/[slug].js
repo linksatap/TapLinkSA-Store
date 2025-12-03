@@ -402,7 +402,7 @@ export default function ProductPage({ product, relatedProducts }) {
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">🚚</span>
                   <div>
-                    <p className="font-bold text-dark text-lg"> شحن مجانب لاكثر من 199</p>
+                    <p className="font-bold text-dark text-lg"> شحن مجاني لاكثر من 199 ريال</p>
                     <p className="text-sm text-gray-600">لجميع مناطق المملكة</p>
                   </div>
                 </div>
@@ -416,7 +416,7 @@ export default function ProductPage({ product, relatedProducts }) {
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">⚡</span>
                   <div>
-                    <p className="font-bold text-dark text-lg">تسليم سريع</p>
+                    <p className="font-bold text-dark text-lg">تسليم سريع للمنتجات المادية</p>
                     <p className="text-sm text-gray-600">1-3 أيام عمل</p>
                   </div>
                 </div>
