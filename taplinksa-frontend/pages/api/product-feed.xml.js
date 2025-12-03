@@ -193,7 +193,7 @@ function makeTitle(product) {
   const isDigital = isDigitalProduct(product);
   const emoji = isDigital ? '🎬' : product.on_sale ? '🔥' : '';
   
-  return `${emoji} ${name} | TapLink SA`.substring(0, 140);
+  return `${emoji} ${name} | متجر تاب لينك`.substring(0, 140);
 }
 
 function makeDescription(product) {
