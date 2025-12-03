@@ -56,40 +56,7 @@ async function fetchProducts() {
   }
 }
 
-// ✅ منتجات تجريبية للاختبار
-function getDemoProducts() {
-  console.log("⚠️ Using demo products");
-  return [
-    {
-      id: 1,
-      name: "بطاقة NFC بيضاء فاخرة",
-      slug: "white-nfc-card",
-      permalink: "https://taplinksa.com/shop/white-nfc-card",
-      price: "299",
-      stock_status: "instock",
-      images: [{ src: "https://cms.taplinksa.com/wp-content/uploads/nfc-white.jpg" }]
-    },
-    {
-      id: 2,
-      name: "بطاقة رفع تقييمات Google Business",
-      slug: "google-review-nfc",
-      permalink: "https://taplinksa.com/shop/google-review-nfc",
-      price: "199",
-      sale_price: "149",
-      stock_status: "instock",
-      images: [{ src: "https://cms.taplinksa.com/wp-content/uploads/nfc-black.jpg" }]
-    },
-    {
-      id: 3,
-      name: "اشتراك نيتفلكس شهري",
-      slug: "netflix-subscription",
-      permalink: "https://taplinksa.com/shop/netflix-subscription",
-      price: "49",
-      stock_status: "instock",
-      images: [{ src: "https://cms.taplinksa.com/wp-content/uploads/netflix.jpg" }]
-    }
-  ];
-}
+
 
 function buildFeed(products) {
   const siteUrl = "https://taplinksa.com";
