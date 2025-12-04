@@ -12,4 +12,21 @@
     <lastmod>2025-12-04T22:00:00Z</lastmod>
   </sitemap>
   
+  <!-- Categories sitemap -->
+  <sitemap>
+    <loc>https://taplinksa.com/server-sitemap-categories.xml</loc>
+    <lastmod>2025-12-04T22:00:00Z</lastmod>
+  </sitemap>
   
+  <!-- Posts/Blog sitemap -->
+  <sitemap>
+    <loc>https://taplinksa.com/server-sitemap-posts.xml</loc>
+    <lastmod>2025-12-04T22:00:00Z</lastmod>
+  </sitemap>
+  
+  <!-- Pages sitemap -->
+  <sitemap>
+    <loc>https://taplinksa.com/server-sitemap-pages.xml</loc>
+    <lastmod>2025-12-04T22:00:00Z</lastmod>
+  </sitemap>
+</sitemapindex>
