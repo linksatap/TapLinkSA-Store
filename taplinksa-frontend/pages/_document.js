@@ -40,8 +40,8 @@ export default function Document() {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
 
-        {/* أيقونة */}
-        <link rel="icon" href="/favicon.ico" />
+        {/* أيقونة 
+        <link rel="icon" href="/favicon.ico" />*/}
 
       </Head>
       <body>
