@@ -1,43 +1,68 @@
+// pages/server-sitemap.xml.js
+// نسخة محسّنة مع معالجة كاملة للأخطاء
+
 import { getServerSideSitemap } from 'next-sitemap';
-import axios from 'axios';
+import { getProducts } from '../lib/api';
 
 export const getServerSideProps = async (ctx) => {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://taplinksa.com";
-  const wp = process.env.NEXT_PUBLIC_WORDPRESS_URL;
-  const key = process.env.WC_CONSUMER_KEY;
-  const secret = process.env.WC_CONSUMER_SECRET;
-
-  let products = [];
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://taplinksa.com';
+  let fields = [];
 
   try {
-    const res = await axios.get(`${wp}/wp-json/wc/v3/products`, {
-      auth: { username: key, password: secret },
-      params: { per_page: 100, status: "publish" }
-    });
+    // جلب المنتجات مع معالجة الأخطاء
+    const products = await getProducts({ per_page: 100 });
+    
+    // التحقق من أن products هو array قبل استخدام map
+    if (products && Array.isArray(products) && products.length > 0) {
+      const productFields = products.map((product) => ({
+        loc: `${siteUrl}/shop/${product.slug}`,
+        lastmod: product.date_modified_gmt || new Date().toISOString(),
+        changefreq: 'weekly',
+        priority: 0.8,
+      }));
+      
+      fields = [...productFields];
+    } else {
+      console.warn('No products returned or products is not an array');
+    }
 
-    // تأكد أنها Array
-    products = Array.isArray(res.data) ? res.data : [];
-  } catch (e) {
-    console.error("Error fetching products:", e.message);
-    products = [];
+  } catch (error) {
+    console.error('Error fetching products for sitemap:', error.message);
+    
+    // في حالة الخطأ، نضيف صفحات ثابتة على الأقل
+    fields = [
+      {
+        loc: `${siteUrl}/shop`,
+        lastmod: new Date().toISOString(),
+        changefreq: 'daily',
+        priority: 0.9,
+      },
+      {
+        loc: `${siteUrl}/coupons`,
+        lastmod: new Date().toISOString(),
+        changefreq: 'weekly',
+        priority: 0.8,
+      },
+      {
+        loc: `${siteUrl}/services`,
+        lastmod: new Date().toISOString(),
+        changefreq: 'monthly',
+        priority: 0.7,
+      },
+    ];
   }
 
-  const productFields = products.map((p) => ({
-    loc: `${siteUrl}/product/${encodeURIComponent(p.slug)}`,
-    lastmod: p.date_modified_gmt || new Date().toISOString(),
-    changefreq: "weekly",
-    priority: 0.9
-  }));
-
-  const staticFields = [
-    { loc: siteUrl, changefreq: "daily", priority: 1.0 },
-    { loc: `${siteUrl}/shop`, changefreq: "daily", priority: 0.9 },
-  ];
-
-  const fields = [
-    ...staticFields,
-    ...productFields
-  ];
+  // التأكد النهائي من أن fields هو array وليس فارغاً
+  if (!Array.isArray(fields) || fields.length === 0) {
+    fields = [
+      {
+        loc: `${siteUrl}/shop`,
+        lastmod: new Date().toISOString(),
+        changefreq: 'daily',
+        priority: 0.9,
+      },
+    ];
+  }
 
   return getServerSideSitemap(ctx, fields);
 };
