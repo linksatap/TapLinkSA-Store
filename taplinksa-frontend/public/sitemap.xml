@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Main sitemap for static pages -->
+  <!-- Static pages sitemap -->
   <sitemap>
     <loc>https://taplinksa.com/sitemap-0.xml</loc>
-    <lastmod>2025-12-04T22:00:00Z</lastmod>
+    <lastmod>2025-12-05T02:46:00Z</lastmod>
   </sitemap>
   
-  <!-- Products sitemap -->
+  <!-- Products sitemap - Dynamic -->
   <sitemap>
-    <loc>https://taplinksa.com/server-sitemap-products.xml</loc>
-    <lastmod>2025-12-04T22:00:00Z</lastmod>
+    <loc>https://taplinksa.com/api/sitemap-products.xml</loc>
+    <lastmod>2025-12-05T02:46:00Z</lastmod>
   </sitemap>
   
-  <!-- Categories sitemap -->
+  <!-- Categories sitemap - Dynamic -->
   <sitemap>
-    <loc>https://taplinksa.com/server-sitemap-categories.xml</loc>
-    <lastmod>2025-12-04T22:00:00Z</lastmod>
+    <loc>https://taplinksa.com/api/sitemap-categories.xml</loc>
+    <lastmod>2025-12-05T02:46:00Z</lastmod>
   </sitemap>
   
-  <!-- Posts/Blog sitemap -->
+  <!-- Blog Posts sitemap - Dynamic -->
   <sitemap>
-    <loc>https://taplinksa.com/server-sitemap-posts.xml</loc>
-    <lastmod>2025-12-04T22:00:00Z</lastmod>
+    <loc>https://taplinksa.com/api/sitemap-posts.xml</loc>
+    <lastmod>2025-12-05T02:46:00Z</lastmod>
   </sitemap>
   
-  <!-- Pages sitemap -->
+  <!-- Pages sitemap - Dynamic -->
   <sitemap>
-    <loc>https://taplinksa.com/server-sitemap-pages.xml</loc>
-    <lastmod>2025-12-04T22:00:00Z</lastmod>
+    <loc>https://taplinksa.com/api/sitemap-pages.xml</loc>
+    <lastmod>2025-12-05T02:46:00Z</lastmod>
   </sitemap>
 </sitemapindex>

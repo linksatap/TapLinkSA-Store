@@ -6,7 +6,6 @@ User-agent: *
 Allow: /
 
 # Disallow crawling of admin and private areas
-Disallow: /api/
 Disallow: /admin/
 Disallow: /cart
 Disallow: /checkout
@@ -28,10 +27,16 @@ Allow: /faq
 Allow: /privacy-policy
 Allow: /terms
 
+# Allow sitemap API routes
+Allow: /api/sitemap-products.xml
+Allow: /api/sitemap-categories.xml
+Allow: /api/sitemap-posts.xml
+Allow: /api/sitemap-pages.xml
+
 # Crawl-delay for bots (optional, helps reduce server load)
 Crawl-delay: 1
 
-# Sitemap location - CORRECT URLs!
+# Sitemap locations - API ROUTES
 Sitemap: https://taplinksa.com/sitemap.xml
 Sitemap: https://taplinksa.com/api/sitemap-products.xml
 Sitemap: https://taplinksa.com/api/sitemap-categories.xml
