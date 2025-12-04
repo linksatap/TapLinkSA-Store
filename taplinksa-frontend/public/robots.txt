@@ -33,7 +33,7 @@ Crawl-delay: 1
 
 # Sitemap location - CORRECT URLs!
 Sitemap: https://taplinksa.com/sitemap.xml
-Sitemap: https://taplinksa.com/server-sitemap-products.xml
-Sitemap: https://taplinksa.com/server-sitemap-categories.xml
-Sitemap: https://taplinksa.com/server-sitemap-posts.xml
-Sitemap: https://taplinksa.com/server-sitemap-pages.xml
+Sitemap: https://taplinksa.com/api/sitemap-products.xml
+Sitemap: https://taplinksa.com/api/sitemap-categories.xml
+Sitemap: https://taplinksa.com/api/sitemap-posts.xml
+Sitemap: https://taplinksa.com/api/sitemap-pages.xml
