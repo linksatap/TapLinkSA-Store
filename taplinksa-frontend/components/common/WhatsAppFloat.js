@@ -6,7 +6,7 @@ export default function WhatsAppFloat() {
 
   return (
     <motion.a
-      href={`https://wa.me/${phoneNumber}?text=${message}`}
+      href={`https://wa.me/966${phoneNumber}?text=${message}`}
       target="_blank"
       rel="noopener noreferrer"
       whileHover={{ scale: 1.1 }}
