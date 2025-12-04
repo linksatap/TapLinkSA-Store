@@ -150,11 +150,11 @@ export default function Cart() {
                 <div className="flex justify-between text-gray-600">
                   <span>المجموع الفرعي</span>
                   <span className="font-bold">{total.toFixed(2)} ر.س</span>
-                </div>
+                </div>{/* الضريبة 
                 <div className="flex justify-between text-gray-600">
                   <span>الضريبة (15%)</span>
                   <span className="font-bold">{(total * 0.15).toFixed(2)} ر.س</span>
-                </div>
+                </div>*/}
                 <div className="flex justify-between text-gray-600">
                   <span>الشحن</span>
                   <span className="font-bold text-green-600">مجاني</span>
