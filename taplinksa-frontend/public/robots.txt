@@ -31,5 +31,9 @@ Allow: /terms
 # Crawl-delay for bots (optional, helps reduce server load)
 Crawl-delay: 1
 
-# Sitemap location
+# Sitemap location - CORRECT URLs!
 Sitemap: https://taplinksa.com/sitemap.xml
+Sitemap: https://taplinksa.com/server-sitemap-products.xml
+Sitemap: https://taplinksa.com/server-sitemap-categories.xml
+Sitemap: https://taplinksa.com/server-sitemap-posts.xml
+Sitemap: https://taplinksa.com/server-sitemap-pages.xml
