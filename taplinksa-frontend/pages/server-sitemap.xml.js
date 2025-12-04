@@ -25,19 +25,19 @@ export const getServerSideProps = async (ctx) => {
     }
 
     // جلب الفئات
-    const categories = await fetchCategories();
+    //const categories = await fetchCategories();
     
-    if (categories && Array.isArray(categories)) {
-      const categoryFields = categories
-        .filter((category) => category.count > 0)
-        .map((category) => ({
-          loc: `${siteUrl}/shop/category/${category.slug}`,
-          lastmod: new Date().toISOString(),
-          changefreq: 'weekly',
-          priority: 0.7,
-        }));
-      fields.push(...categoryFields);
-    }
+    //if (categories && Array.isArray(categories)) {
+     // const categoryFields = categories
+      //  .filter((category) => category.count > 0)
+       // .map((category) => ({
+       //   loc: `${siteUrl}/shop/category/${category.slug}`,
+       //   lastmod: new Date().toISOString(),
+       //   changefreq: 'weekly',
+       //   priority: 0.7,
+     //   }));
+   //   fields.push(...categoryFields);
+   // }
 
     // إذا كانت لديك مقالات، أضف هنا:
     // const posts = await fetchPosts();
