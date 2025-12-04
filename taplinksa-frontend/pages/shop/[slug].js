@@ -8,7 +8,7 @@ import Layout from '../../components/layout/Layout';
 import { useCart } from '../../context/CartContext';
 import ProductReviews from '../../components/ProductReviews';
 import ProductSchema from '@/components/seo/ProductSchema';
-import BreadcrumbSchema from '@/components/seo/BreadcrumbSchema'; // استيراد مكون 
+//import BreadcrumbSchema from '@/components/seo/BreadcrumbSchema'; // استيراد مكون 
 export default function ProductPage({ product, relatedProducts }) {
  
 
