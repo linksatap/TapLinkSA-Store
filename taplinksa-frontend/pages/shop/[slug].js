@@ -8,6 +8,7 @@ import Layout from '../../components/layout/Layout';
 import { useCart } from '../../context/CartContext';
 import ProductReviews from '../../components/ProductReviews';
 import ProductSchema from '@/components/seo/ProductSchema';
+import BreadcrumbSchema from '@/components/seo/BreadcrumbSchema';
 export default function ProductPage({ product, relatedProducts }) {
  
 
@@ -19,6 +20,18 @@ export default function ProductPage({ product, relatedProducts }) {
   const [activeTab, setActiveTab] = useState('description');
   const [showSuccess, setShowSuccess] = useState(false);
   const { addToCart } = useCart();
+// داخل الـ Component، بعد useState
+const breadcrumbItems = [
+  { name: 'الرئيسية', url: '/' },
+  { name: 'المتجر', url: '/shop' },
+  {
+    name: product?.categories?.[0]?.name || 'المنتجات',
+    url: product?.categories?.[0]?.slug 
+      ? `/shop/category/${product.categories[0].slug}` 
+      : '/shop'
+  },
+  { name: product?.name || 'المنتج' }
+];
 
   // Loading state
   if (router.isFallback) {
@@ -96,7 +109,7 @@ export default function ProductPage({ product, relatedProducts }) {
       image={images[0]?.src}
     >
             <ProductSchema product={product} />
-
+      <BreadcrumbSchema items={breadcrumbItems} />
       <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
         <div className="container-custom py-8">
           
