@@ -12,31 +12,7 @@ import BreadcrumbSchema from '@/components/seo/BreadcrumbSchema'; // استير�
 export default function ProductPage({ product, relatedProducts }) {
  
 
-  const pageTitle = `${product.name} | تاب لينك السعودية`;
-  const pageDescription = product.short_description?.replace(/<[^>]*>/g, '').slice(0, 160) || product.name;
-  const pageImage = product.images[0]?.src;
-
-  // إعداد بيانات Breadcrumbs
-  const breadcrumbs = [
-    { name: 'الرئيسية', url: '/' },
-    { name: 'المتجر', url: '/shop' },
-    { name: product.name, url: `/shop/${product.slug}` },
-  ];
-
-  return (
-    <Layout
-      title={pageTitle}
-      description={pageDescription}
-      ogImage={pageImage}
-      // لا حاجة لتمرير canonical هنا، سيتم حسابه تلقائياً في Layout
-    >
-      <ProductSchema product={product} />
-      <BreadcrumbSchema breadcrumbs={breadcrumbs} /> {/* إضافة Schema للـ Breadcrumbs */}
-
-      {/* ... باقي محتوى الصفحة ... */}
-    </Layout>
-  );
-
+  
 
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState(0);
