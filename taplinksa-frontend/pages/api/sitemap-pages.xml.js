@@ -1,11 +1,10 @@
 // pages/api/sitemap-pages.xml.js
-import axios from 'axios';
 
 export default async function handler(req, res) {
   try {
-    console.log('📄 Generating pages sitemap...');
+    console.log('📄 Generating Next.js pages sitemap...');
 
-    const pages = await fetchPages();
+    const pages = getNextJsPages();
     const xml = buildPagesSitemap(pages);
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
@@ -18,50 +17,85 @@ export default async function handler(req, res) {
   }
 }
 
-async function fetchPages() {
-  try {
-    const url = `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/wp/v2/pages`;
-    
-    const response = await axios.get(url, {
-      params: {
-        per_page: 100,
-        status: 'publish',
-        _fields: 'id,slug,modified_gmt'
-      },
-      timeout: 15000
-    });
-
-    console.log(`✅ Fetched ${response.data.length} pages`);
-    return response.data;
-
-  } catch (error) {
-    console.error('❌ Error:', error.message);
-    return [];
-  }
-}
-
-function buildPagesSitemap(pages) {
+// ✅ صفحات Next.js فقط
+function getNextJsPages() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://taplinksa.com';
   const now = new Date().toISOString();
 
-  const excludedSlugs = ['cart', 'checkout', 'my-account'];
+  return [
+    {
+      loc: `${siteUrl}/`,
+      lastmod: now,
+      changefreq: 'daily',
+      priority: 1.0
+    },
+    {
+      loc: `${siteUrl}/shop`,
+      lastmod: now,
+      changefreq: 'daily',
+      priority: 0.9
+    },
+    {
+      loc: `${siteUrl}/subscriptions`,
+      lastmod: now,
+      changefreq: 'daily',
+      priority: 0.9
+    },
+    {
+      loc: `${siteUrl}/coupons`,
+      lastmod: now,
+      changefreq: 'daily',
+      priority: 0.9
+    },
+    {
+      loc: `${siteUrl}/about`,
+      lastmod: now,
+      changefreq: 'monthly',
+      priority: 0.8
+    },
+    {
+      loc: `${siteUrl}/contact`,
+      lastmod: now,
+      changefreq: 'monthly',
+      priority: 0.8
+    },
+    {
+      loc: `${siteUrl}/blog`,
+      lastmod: now,
+      changefreq: 'weekly',
+      priority: 0.8
+    },
+    {
+      loc: `${siteUrl}/services`,
+      lastmod: now,
+      changefreq: 'monthly',
+      priority: 0.7
+    },
+    {
+      loc: `${siteUrl}/privacy-policy`,
+      lastmod: now,
+      changefreq: 'yearly',
+      priority: 0.5
+    },
+    {
+      loc: `${siteUrl}/terms`,
+      lastmod: now,
+      changefreq: 'yearly',
+      priority: 0.5
+    },
+    // ✅ أضف صفحاتك الأخرى هنا
+  ];
+}
 
+function buildPagesSitemap(pages) {
   const urls = pages
-    .filter(p => p.slug && !excludedSlugs.includes(p.slug))
-    .map(page => {
-      const slug = encodeURIComponent(page.slug);
-      const lastmod = page.modified_gmt 
-        ? new Date(page.modified_gmt).toISOString()
-        : now;
-
-      return `
+    .map(page => `
   <url>
-    <loc>${siteUrl}/${slug}</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>`;
-    })
+    <loc>${page.loc}</loc>
+    <lastmod>${page.lastmod}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`)
     .join('');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
