@@ -1,18 +1,18 @@
 // pages/server-sitemap.xml.js
+// نسخة بديلة تستخدم دوال API موجودة في المشروع
+
 import { getServerSideSitemap } from 'next-sitemap';
+import { fetchProducts, fetchCategories } from '../lib/woocommerce'; // استخدم الدوال الموجودة في مشروعك
 
 export const getServerSideProps = async (ctx) => {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://taplinksa.com';
   const fields = [];
 
   try {
-    // جلب المنتجات من WooCommerce API
-    const productsResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_WOOCOMMERCE_URL}/wp-json/wc/v3/products?per_page=100&consumer_key=${process.env.NEXT_PUBLIC_WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${process.env.NEXT_PUBLIC_WOOCOMMERCE_CONSUMER_SECRET}`
-    );
-
-    if (productsResponse.ok) {
-      const products = await productsResponse.json();
+    // جلب المنتجات باستخدام الدوال الموجودة في lib/woocommerce.js
+    const products = await fetchProducts({ per_page: 100 });
+    
+    if (products && Array.isArray(products)) {
       const productFields = products.map((product) => ({
         loc: `${siteUrl}/shop/${product.slug}`,
         lastmod: product.date_modified_gmt 
@@ -24,15 +24,12 @@ export const getServerSideProps = async (ctx) => {
       fields.push(...productFields);
     }
 
-    // جلب الفئات من WooCommerce API
-    const categoriesResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_WOOCOMMERCE_URL}/wp-json/wc/v3/products/categories?per_page=100&consumer_key=${process.env.NEXT_PUBLIC_WOOCOMMERCE_CONSUMER_KEY}&consumer_secret=${process.env.NEXT_PUBLIC_WOOCOMMERCE_CONSUMER_SECRET}`
-    );
-
-    if (categoriesResponse.ok) {
-      const categories = await categoriesResponse.json();
+    // جلب الفئات
+    const categories = await fetchCategories();
+    
+    if (categories && Array.isArray(categories)) {
       const categoryFields = categories
-        .filter((category) => category.count > 0) // فقط الفئات التي تحتوي على منتجات
+        .filter((category) => category.count > 0)
         .map((category) => ({
           loc: `${siteUrl}/shop/category/${category.slug}`,
           lastmod: new Date().toISOString(),
@@ -42,27 +39,33 @@ export const getServerSideProps = async (ctx) => {
       fields.push(...categoryFields);
     }
 
-    // جلب المقالات من WordPress API (إذا كانت المدونة موجودة)
-    const postsResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_WOOCOMMERCE_URL}/wp-json/wp/v2/posts?per_page=100`
-    );
-
-    if (postsResponse.ok) {
-      const posts = await postsResponse.json();
-      const postFields = posts.map((post) => ({
-        loc: `${siteUrl}/blog/${post.slug}`,
-        lastmod: post.modified_gmt 
-          ? new Date(post.modified_gmt).toISOString() 
-          : new Date().toISOString(),
-        changefreq: 'monthly',
-        priority: 0.6,
-      }));
-      fields.push(...postFields);
-    }
+    // إذا كانت لديك مقالات، أضف هنا:
+    // const posts = await fetchPosts();
+    // if (posts && Array.isArray(posts)) {
+    //   const postFields = posts.map((post) => ({
+    //     loc: `${siteUrl}/blog/${post.slug}`,
+    //     lastmod: post.modified_gmt 
+    //       ? new Date(post.modified_gmt).toISOString() 
+    //       : new Date().toISOString(),
+    //     changefreq: 'monthly',
+    //     priority: 0.6,
+    //   }));
+    //   fields.push(...postFields);
+    // }
 
   } catch (error) {
     console.error('Error generating server sitemap:', error);
     // في حالة الخطأ، نرجع sitemap فارغ بدلاً من خطأ 500
+  }
+
+  // إذا لم يتم جلب أي بيانات، أضف على الأقل الصفحات الثابتة
+  if (fields.length === 0) {
+    fields.push({
+      loc: `${siteUrl}/shop`,
+      lastmod: new Date().toISOString(),
+      changefreq: 'daily',
+      priority: 0.9,
+    });
   }
 
   return getServerSideSitemap(ctx, fields);
