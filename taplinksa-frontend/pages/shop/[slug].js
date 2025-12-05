@@ -816,6 +816,8 @@ export default function ProductPage({ product, relatedProducts, productVariants 
  * 1. جلب المتغيرات من WooCommerce
  * 2. معالجة الأخطاء بشكل أفضل
  * 3. إضافة timeout للطلبات
+ * 
+ * ملاحظة: استخدمنا getServerSideProps بدلاً من getStaticProps للحصول على بيانات محدثة باستمرار
  */
 export async function getServerSideProps({ params }) {
   try {
@@ -907,7 +909,6 @@ export async function getServerSideProps({ params }) {
         relatedProducts,
         productVariants,
       },
-      revalidate: 3600, // ISR: إعادة التحقق كل ساعة
     };
   } catch (error) {
     console.error('Error in SSR:', error.message);
