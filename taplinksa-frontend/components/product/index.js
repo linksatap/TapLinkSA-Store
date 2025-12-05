@@ -13,6 +13,6 @@ export { default as ProductSpecs } from './ProductSpecs';
 export { default as ProductRelated } from './ProductRelated';
 export { default as ProductSkeleton } from './ProductSkeleton';
 
-// Hooks
-export { useProductState } from './useProductState';
-export { useProductActions } from './useProductActions';
+// إلى:
+export { useProductState } from '../hooks/product-hooks';
+export { useProductActions } from '../hooks/product-hooks';
