@@ -83,7 +83,7 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
 
   return (
     <Layout
-      title="المتجر | تاب لينك "
+      title="المتجر | تاب لينك السعودية"
       description="تسوق بطاقات NFC الذكية والحوامل الذكية من تاب لينك السعودية"
     >
       <div className="container-custom section-padding">
