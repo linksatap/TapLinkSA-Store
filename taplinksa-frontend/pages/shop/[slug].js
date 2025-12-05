@@ -1,4 +1,4 @@
-// pages/products/[slug].js
+// pages/products/[slug].js - Fixed Version
 // Refactored to use component-based architecture
 
 import Head from 'next/head';
@@ -258,30 +258,53 @@ export async function getServerSideProps({ params, req }) {
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'taplinksa.com';
     const baseUrl = `${protocol}://${host}`;
 
+    // WooCommerce REST API endpoints
+    const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL || 'https://your-woocommerce-site.com/wp-json/wc/v3';
+    const WC_CONSUMER_KEY = process.env.WC_CONSUMER_KEY;
+    const WC_CONSUMER_SECRET = process.env.WC_CONSUMER_SECRET;
+
+    // Build auth header for WooCommerce REST API
+    const auth = Buffer.from(`${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}`).toString('base64');
+
     const [productRes, relatedRes] = await Promise.all([
-      fetch(`${baseUrl}/api/products/${slug}`),
-      fetch(`${baseUrl}/api/products?per_page=4`).catch(() => ({
+      // Fetch single product by slug
+      fetch(`${WC_API_URL}/products?slug=${slug}`, {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }),
+      // Fetch related products
+      fetch(`${WC_API_URL}/products?per_page=4&orderby=popularity`, {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }).catch(() => ({
         json: () => ({ products: [] }),
       })),
     ]);
 
-    const product = await productRes.json();
+    const products = await productRes.json();
     const relatedData = await relatedRes.json();
 
-    if (!product || product.error) {
+    // Get first product from array
+    const product = Array.isArray(products) && products.length > 0 ? products[0] : null;
+
+    if (!product) {
       return {
         props: {
           product: { error: true },
           relatedProducts: [],
         },
+        revalidate: 60,
       };
     }
 
     return {
       props: {
         product,
-        relatedProducts: relatedData.products || [],
+        relatedProducts: Array.isArray(relatedData) ? relatedData.slice(0, 4) : [],
       },
+      revalidate: 3600, // Revalidate every hour
     };
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -290,6 +313,7 @@ export async function getServerSideProps({ params, req }) {
         product: { error: true },
         relatedProducts: [],
       },
+      revalidate: 60,
     };
   }
 }
