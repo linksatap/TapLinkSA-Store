@@ -1,9 +1,9 @@
-// pages/shop/[slug].js - Fixed Version
-// Refactored to use component-based architecture
+// pages/shop/[slug].js - Final Version with All Fixes
 
 import Head from 'next/head';
 import Layout from '../../components/layout/Layout';
 import { useRouter } from 'next/router';
+import { useState } from 'react';
 
 // Import all product components
 import {
@@ -22,8 +22,13 @@ import {
   useProductActions,
 } from '../../components/product';
 
+// Import Reviews component
+import ProductReviews from '../../components/product/ProductReviews';
+
 export default function ProductPage({ product: initialProduct, relatedProducts }) {
   const router = useRouter();
+  const [displayPrice, setDisplayPrice] = useState(initialProduct?.price);
+  const [displayRegularPrice, setDisplayRegularPrice] = useState(initialProduct?.regular_price);
   
   // Use custom hooks for state management
   const productState = useProductState(initialProduct);
@@ -63,8 +68,8 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
   // Compute derived values
   const product = initialProduct;
   const images = product.images || [];
-  const price = parseFloat(product.price);
-  const regularPrice = parseFloat(product.regular_price);
+  const price = parseFloat(displayPrice);
+  const regularPrice = parseFloat(displayRegularPrice);
   const discountPercentage =
     regularPrice > price
       ? Math.round(((regularPrice - price) / regularPrice) * 100)
@@ -75,7 +80,7 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
   // Handle cart operations
   const handleAddToCart = () => {
     productActions.handleAddToCart(
-      product,
+      { ...product, price: displayPrice },
       productState.quantity,
       productState.selectedOptions
     );
@@ -83,10 +88,17 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
 
   const handleBuyNow = () => {
     productActions.handleBuyNow(
-      product,
+      { ...product, price: displayPrice },
       productState.quantity,
       productState.selectedOptions
     );
+  };
+
+  const handleVariantPriceChange = (selectedOption) => {
+    // إذا كانت هناك منتجات مرتبطة بخيارات مختلفة بأسعار مختلفة
+    // هنا يمكن تحديث السعر بناءً على الخيار المختار
+    // مثال: لو كان هناك variant بسعر مختلف
+    // setDisplayPrice(newPrice);
   };
 
   return (
@@ -136,8 +148,8 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
         </script>
       </Head>
 
-      <div className="bg-gradient-to-br from-gold/5 via-white to-gray-50 min-h-screen py-6 md:py-12">
-        <div className="container mx-auto px-4 md:px-8">
+      <div className="bg-gradient-to-br from-gold/5 via-white to-gray-50 min-h-screen py-6 md:py-10">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
           {/* Breadcrumb */}
           <nav className="mb-6 text-sm" data-aos="fade-right">
             <ol className="flex items-center gap-2 text-gray-600">
@@ -158,7 +170,7 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
           </nav>
 
           {/* Main Product Section */}
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 mb-12">
+          <div className="grid lg:grid-cols-2 gap-8 mb-12">
             {/* LEFT: Image Gallery */}
             <ProductImageGallery
               images={images}
@@ -170,7 +182,7 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
             />
 
             {/* RIGHT: Product Details */}
-            <div className="space-y-6" data-aos="fade-left">
+            <div className="space-y-4" data-aos="fade-left">
               {/* Product Header */}
               <ProductHeader product={product} />
 
@@ -199,6 +211,7 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
                 selectedOptions={productState.selectedOptions}
                 isOutOfStock={isOutOfStock}
                 onOptionChange={productState.handleOptionChange}
+                onPriceChange={handleVariantPriceChange}
               />
 
               {/* Quantity */}
@@ -226,7 +239,7 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
           {(product.description ||
             (product.attributes && product.attributes.length > 0)) && (
             <div
-              className="bg-white rounded-2xl shadow-lg p-5 md:p-8 mb-12"
+              className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8"
               data-aos="fade-up"
             >
               <ProductDescription description={product.description} />
@@ -242,8 +255,18 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
             </div>
           )}
 
+          {/* Reviews Section */}
+          <ProductReviews 
+            productId={product.id}
+            reviews={product.reviews || []}
+          />
+
           {/* Related Products */}
-          <ProductRelated relatedProducts={relatedProducts} />
+          {relatedProducts && relatedProducts.length > 0 && (
+            <div className="mt-12">
+              <ProductRelated relatedProducts={relatedProducts} />
+            </div>
+          )}
         </div>
       </div>
     </Layout>
@@ -268,17 +291,8 @@ export async function getServerSideProps({ params, req }) {
     };
 
     // Fetch product by slug
-    const [productRes, relatedRes] = await Promise.all([
-      fetch(`${WC_API_URL}/products?slug=${encodeURIComponent(slug)}`, { headers }),
-      fetch(`${WC_API_URL}/products?per_page=4&orderby=popularity`, { headers }).catch(
-        () => ({
-          json: async () => [],
-        })
-      ),
-    ]);
-
+    const productRes = await fetch(`${WC_API_URL}/products?slug=${encodeURIComponent(slug)}`, { headers });
     const products = await productRes.json();
-    const relatedProducts = await relatedRes.json();
 
     // Get first product from array (WooCommerce returns array)
     const product = Array.isArray(products) && products.length > 0 ? products[0] : null;
@@ -294,10 +308,21 @@ export async function getServerSideProps({ params, req }) {
       };
     }
 
+    // Fetch related products (safely)
+    let relatedProducts = [];
+    try {
+      const relatedRes = await fetch(`${WC_API_URL}/products?per_page=4&orderby=popularity`, { headers });
+      relatedProducts = await relatedRes.json();
+      relatedProducts = Array.isArray(relatedProducts) ? relatedProducts.slice(0, 4) : [];
+    } catch (err) {
+      console.error('Error fetching related products:', err);
+      relatedProducts = [];
+    }
+
     return {
       props: {
         product,
-        relatedProducts: Array.isArray(relatedProducts) ? relatedProducts.slice(0, 4) : [],
+        relatedProducts: relatedProducts.filter(p => p.id !== product.id), // Remove current product
       },
     };
   } catch (error) {

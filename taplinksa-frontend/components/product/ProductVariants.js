@@ -1,45 +1,76 @@
-// components/product/ProductVariants.js
-export default function ProductVariants({
-  attributes = [],
-  selectedOptions,
-  isOutOfStock,
-  onOptionChange,
-}) {
-  const variationAttributes = attributes.filter((attr) => attr.variation);
+// components/product/ProductVariants.js - Updated
+import { useState, useEffect } from 'react';
 
-  if (!variationAttributes.length) return null;
+export default function ProductVariants({ 
+  attributes = [], 
+  selectedOptions, 
+  isOutOfStock, 
+  onOptionChange,
+  onPriceChange 
+}) {
+  if (!attributes || attributes.length === 0) {
+    return null;
+  }
+
+  const handleVariantChange = (attributeName, value) => {
+    onOptionChange(attributeName, value);
+    
+    // إذا كان هناك تعديل السعر المرتبط بالخيار
+    if (onPriceChange) {
+      onPriceChange(value);
+    }
+  };
 
   return (
-    <div className="space-y-4 bg-gray-50 rounded-lg p-4 md:p-5">
-      {variationAttributes.map((attribute, idx) => (
-        <div key={idx}>
-          <label className="block text-xs md:text-sm font-bold text-dark mb-3">
-            {attribute.name}
-            {selectedOptions[attribute.name] && (
-              <span className="mr-2 text-gold text-xs md:text-sm font-medium">
-                ✓ {selectedOptions[attribute.name]}
-              </span>
-            )}
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {attribute.options.map((option, optIdx) => (
-              <button
-                key={optIdx}
-                onClick={() => onOptionChange(attribute.name, option)}
-                disabled={isOutOfStock}
-                className={`px-3 py-2 md:py-3 rounded-lg font-medium text-xs md:text-sm transition-all border-2 active:scale-95 ${
-                  selectedOptions[attribute.name] === option
-                    ? 'bg-gold text-white border-gold shadow-lg'
-                    : 'bg-white text-dark border-gray-300 hover:border-gold hover:bg-gold/5'
-                } ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={`اختر ${option}`}
-              >
-                {option}
-              </button>
-            ))}
+    <div className="space-y-6 py-6 border-y border-gray-200">
+      <h3 className="text-lg font-bold text-dark">الخيارات المتاحة</h3>
+
+      {attributes.map((attribute) => {
+        // تخطي الخيارات التي لا تؤثر على السعر أو الأداء
+        if (attribute.variation === false) {
+          return null;
+        }
+
+        const attributeName = attribute.name;
+        const options = attribute.options || [];
+        const selectedValue = selectedOptions[attributeName];
+
+        return (
+          <div key={attributeName} className="space-y-3">
+            <label className="block font-semibold text-dark">
+              {attributeName}
+              {selectedValue && (
+                <span className="text-gold mr-2">← {selectedValue}</span>
+              )}
+            </label>
+
+            <div className="flex flex-wrap gap-2">
+              {options.map((option) => {
+                const isSelected = selectedValue === option;
+                const isDisabled = isOutOfStock;
+
+                return (
+                  <button
+                    key={option}
+                    onClick={() => !isDisabled && handleVariantChange(attributeName, option)}
+                    disabled={isDisabled}
+                    className={`
+                      px-4 py-2 rounded-lg border-2 transition-all font-medium
+                      ${isSelected
+                        ? 'border-gold bg-gold/10 text-gold'
+                        : 'border-gray-300 bg-white text-dark hover:border-gold'
+                      }
+                      ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
