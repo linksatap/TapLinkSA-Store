@@ -148,7 +148,7 @@ export default function HeroSection() {
               transition={{ delay: 0.5 }}
               className="flex flex-wrap gap-4 mb-12"
             >
-              <Link href="/contact" className="btn-primary text-lg px-8 py-4 animate-glow">
+              <Link href="/shop" className="btn-primary text-lg px-8 py-4 animate-glow">
                 اطلب الآن
               </Link>
               <Link href="/about" className="btn-secondary text-lg px-8 py-4">
