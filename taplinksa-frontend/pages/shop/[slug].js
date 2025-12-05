@@ -5,8 +5,8 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
 import { useCart } from '../../context/CartContext';
-import ProductImageGallery from '../../components/products/ProductImageGallery';
-import StickyAddToCart from '../../components/products/StickyAddToCart';
+import ProductImageGallery from '../../components/ProductImageGallery';
+import StickyAddToCart from '../../components/StickyAddToCart';
 
 export default function ProductPage({ product, relatedProducts }) {
   const router = useRouter();
