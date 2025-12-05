@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
+//import gsap from 'gsap';
 
 export default function Stats() {
   const sectionRef = useRef(null);
