@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -9,88 +9,37 @@ import { useCart } from '../../context/CartContext';
 import ProductReviews from '../../components/ProductReviews';
 import ProductSchema from '@/components/seo/ProductSchema';
 import BreadcrumbSchema from '@/components/seo/BreadcrumbSchema';
+export default function ProductPage({ product, relatedProducts }) {
+ 
 
-/**
- * تحسينات UX/CX المطبقة:
- * 1. استخدام useMemo لتحسين الأداء
- * 2. إضافة حد أقصى للكمية بناءً على المخزون
- * 3. تحسين رسائل النجاح والخطأ
- * 4. إضافة قسم الأنواع (Variants) من WooCommerce
- * 5. تحسين سهولة الوصول (Accessibility)
- * 6. إضافة تأكيد قبل الشراء
- * 7. تحسين الأداء مع lazy loading
- * 8. إضافة خيارات الدفع والشحن بشكل أوضح
- */
+  
 
-export default function ProductPage({ product, relatedProducts, productVariants }) {
   const router = useRouter();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
   const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [selectedVariant, setSelectedVariant] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const successTimeoutRef = useRef(null);
   const { addToCart } = useCart();
-
-  // Breadcrumb items
-  const breadcrumbItems = useMemo(() => [
-    { name: 'الرئيسية', url: '/' },
-    { name: 'المتجر', url: '/shop' },
-    {
-      name: product?.categories?.[0]?.name || 'المنتجات',
-      url: product?.categories?.[0]?.slug
-        ? `/shop/category/${product.categories[0].slug}`
-        : '/shop'
-    },
-    { name: product?.name || 'المنتج' }
-  ], [product]);
-
-  // حساب السعر والخصم
-  const priceData = useMemo(() => {
-    const price = parseFloat(product?.price || 0);
-    const regularPrice = parseFloat(product?.regular_price || 0);
-    const salePrice = parseFloat(product?.sale_price || 0);
-    const hasDiscount = product?.on_sale && salePrice > 0 && regularPrice > salePrice;
-    const discountPercent = hasDiscount
-      ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
-      : 0;
-
-    return {
-      price,
-      regularPrice,
-      salePrice,
-      hasDiscount,
-      discountPercent,
-      displayPrice: hasDiscount ? salePrice : price,
-      savings: hasDiscount ? (regularPrice - salePrice).toFixed(2) : 0
-    };
-  }, [product]);
-
-  // الحد الأقصى للكمية
-  const maxQuantity = useMemo(() => {
-    const stock = product?.stock_quantity || 100;
-    return Math.min(stock, 100); // حد أقصى 100 قطعة
-  }, [product?.stock_quantity]);
-
-  // تنظيف timeout عند unmount
-  useEffect(() => {
-    return () => {
-      if (successTimeoutRef.current) {
-        clearTimeout(successTimeoutRef.current);
-      }
-    };
-  }, []);
+// داخل الـ Component، بعد useState
+const breadcrumbItems = [
+  { name: 'الرئيسية', url: '/' },
+  { name: 'المتجر', url: '/shop' },
+  {
+    name: product?.categories?.[0]?.name || 'المنتجات',
+    url: product?.categories?.[0]?.slug 
+      ? `/shop/category/${product.categories[0].slug}` 
+      : '/shop'
+  },
+  { name: product?.name || 'المنتج' }
+];
 
   // Loading state
   if (router.isFallback) {
     return (
       <Layout title="جاري التحميل...">
         <div className="container-custom section-padding text-center">
-          <div className="animate-spin text-6xl mb-4">⏳</div>
-          <p className="text-xl text-gray-600">جاري تحميل المنتج...</p>
+          <div className="text-6xl mb-4">⏳</div>
+          <p className="text-xl">جاري تحميل المنتج...</p>
         </div>
       </Layout>
     );
@@ -104,7 +53,7 @@ export default function ProductPage({ product, relatedProducts, productVariants 
           <div className="text-8xl mb-6">😞</div>
           <h1 className="text-4xl font-bold mb-4">المنتج غير موجود</h1>
           <p className="text-gray-600 mb-8">عذراً، لم نتمكن من العثور على هذا المنتج</p>
-          <Link href="/shop" className="btn-primary inline-block">
+          <Link href="/shop" className="btn-primary">
             العودة للمتجر
           </Link>
         </div>
@@ -113,73 +62,31 @@ export default function ProductPage({ product, relatedProducts, productVariants 
   }
 
   const images = product.images || [];
+  const price = parseFloat(product.price);
+  const regularPrice = parseFloat(product.regular_price);
+  const salePrice = parseFloat(product.sale_price);
+  const hasDiscount = product.on_sale && salePrice > 0 && regularPrice > salePrice;
+  const discountPercent = hasDiscount 
+    ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
+    : 0;
 
-  // معالجة إضافة المنتج للسلة مع تحسينات
-  const handleAddToCart = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // التحقق من اختيار المتغيرات إن وجدت
-      if (productVariants && productVariants.length > 0 && !selectedVariant) {
-        setError('يرجى اختيار نوع المنتج أولاً');
-        setIsLoading(false);
-        return;
-      }
-
-      // التحقق من الكمية
-      if (quantity < 1 || quantity > maxQuantity) {
-        setError(`الكمية يجب أن تكون بين 1 و ${maxQuantity}`);
-        setIsLoading(false);
-        return;
-      }
-
-      // إضافة المنتج للسلة
-      for (let i = 0; i < quantity; i++) {
-        addToCart({
-          ...product,
-          variant: selectedVariant
-        });
-      }
-
-      setSuccessMessage(`تمت إضافة ${quantity} من ${product.name} للسلة بنجاح ✅`);
-      setShowSuccess(true);
-      setQuantity(1);
-
-      // إغلاق الرسالة بعد 3 ثواني
-      if (successTimeoutRef.current) {
-        clearTimeout(successTimeoutRef.current);
-      }
-      successTimeoutRef.current = setTimeout(() => {
-        setShowSuccess(false);
-      }, 3000);
-    } catch (err) {
-      setError('حدث خطأ أثناء إضافة المنتج للسلة');
-      console.error('Error adding to cart:', err);
-    } finally {
-      setIsLoading(false);
+  const handleAddToCart = () => {
+    for (let i = 0; i < quantity; i++) {
+      addToCart(product);
     }
-  }, [quantity, product, addToCart, selectedVariant, productVariants, maxQuantity]);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 2000);
+  };
 
-  // معالجة الشراء الفوري مع تأكيد
-  const handleBuyNow = useCallback(async () => {
-    if (productVariants && productVariants.length > 0 && !selectedVariant) {
-      setError('يرجى اختيار نوع المنتج أولاً');
-      return;
-    }
+  const handleBuyNow = () => {
+    handleAddToCart();
+    router.push('/checkout');
+  };
 
-    await handleAddToCart();
-    // الانتظار قليلاً قبل الانتقال للدفع
-    setTimeout(() => {
-      router.push('/checkout');
-    }, 500);
-  }, [handleAddToCart, selectedVariant, productVariants, router]);
-
-  // مشاركة المنتج
-  const shareProduct = useCallback((platform) => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    const text = `${product.name} - ${priceData.displayPrice.toFixed(2)} ر.س`;
-
+  const shareProduct = (platform) => {
+    const url = window.location.href;
+    const text = `${product.name} - ${price.toFixed(2)} ر.س`;
+    
     const links = {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`,
       twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
@@ -188,26 +95,12 @@ export default function ProductPage({ product, relatedProducts, productVariants 
     };
 
     if (platform === 'copy') {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(() => {
-          setSuccessMessage('✅ تم نسخ الرابط!');
-          setShowSuccess(true);
-          setTimeout(() => setShowSuccess(false), 2000);
-        });
-      }
+      navigator.clipboard.writeText(url);
+      alert('✅ تم نسخ الرابط!');
     } else {
       window.open(links[platform], '_blank', 'noopener,noreferrer');
     }
-  }, [product.name, priceData.displayPrice]);
-
-  // معالجة تغيير الكمية مع التحقق من الحد الأقصى
-  const handleQuantityChange = useCallback((newQuantity) => {
-    const validQuantity = Math.max(1, Math.min(newQuantity, maxQuantity));
-    setQuantity(validQuantity);
-  }, [maxQuantity]);
-
-  const isInStock = product.stock_status === 'instock';
-  const hasVariants = productVariants && productVariants.length > 0;
+  };
 
   return (
     <Layout
@@ -215,10 +108,11 @@ export default function ProductPage({ product, relatedProducts, productVariants 
       description={product.short_description?.replace(/<[^>]*>/g, '').slice(0, 160)}
       image={images[0]?.src}
     >
-      <ProductSchema product={product} />
+            <ProductSchema product={product} />
       <BreadcrumbSchema items={breadcrumbItems} />
       <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
         <div className="container-custom py-8">
+          
           {/* Success Message */}
           <AnimatePresence>
             {showSuccess && (
@@ -226,27 +120,9 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                 initial={{ opacity: 0, y: -50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -50 }}
-                className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl font-bold max-w-sm"
-                role="alert"
-                aria-live="polite"
+                className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl font-bold"
               >
-                {successMessage}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Error Message */}
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -50 }}
-                className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl font-bold max-w-sm"
-                role="alert"
-                aria-live="polite"
-              >
-                {error}
+                ✅ تمت إضافة {quantity} من {product.name} للسلة
               </motion.div>
             )}
           </AnimatePresence>
@@ -254,28 +130,38 @@ export default function ProductPage({ product, relatedProducts, productVariants 
           {/* Breadcrumb */}
           <nav className="mb-8 text-sm" aria-label="Breadcrumb">
             <ol className="flex items-center gap-2 flex-wrap">
-              {breadcrumbItems.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  {index > 0 && <li className="text-gray-400">/</li>}
+              <li>
+                <Link href="/" className="text-gray-600 hover:text-gold transition-colors">
+                  الرئيسية
+                </Link>
+              </li>
+              <li className="text-gray-400">/</li>
+              <li>
+                <Link href="/shop" className="text-gray-600 hover:text-gold transition-colors">
+                  المتجر
+                </Link>
+              </li>
+              {product.categories && product.categories[0] && (
+                <>
+                  <li className="text-gray-400">/</li>
                   <li>
-                    {item.url ? (
-                      <Link
-                        href={item.url}
-                        className="text-gray-600 hover:text-gold transition-colors"
-                      >
-                        {item.name}
-                      </Link>
-                    ) : (
-                      <span className="text-gold font-bold truncate max-w-xs">{item.name}</span>
-                    )}
+                    <Link 
+                      href={`/shop?category=${product.categories[0].id}`} 
+                      className="text-gray-600 hover:text-gold transition-colors"
+                    >
+                      {product.categories[0].name}
+                    </Link>
                   </li>
-                </div>
-              ))}
+                </>
+              )}
+              <li className="text-gray-400">/</li>
+              <li className="text-gold font-bold truncate max-w-xs">{product.name}</li>
             </ol>
           </nav>
 
           {/* Main Content */}
           <div className="grid lg:grid-cols-2 gap-12 mb-16">
+            
             {/* Image Gallery */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
@@ -284,14 +170,14 @@ export default function ProductPage({ product, relatedProducts, productVariants 
             >
               {/* Main Image */}
               <div className="relative bg-white rounded-3xl overflow-hidden shadow-xl aspect-square">
-                {priceData.hasDiscount && (
+                {hasDiscount && (
                   <div className="absolute top-6 right-6 z-10">
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
                       className="px-4 py-2 rounded-full text-sm font-bold text-white bg-gradient-to-r from-red-500 to-red-600 shadow-lg"
                     >
-                      خصم {priceData.discountPercent}%
+                      خصم {discountPercent}%
                     </motion.div>
                   </div>
                 )}
@@ -331,13 +217,11 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                       onClick={() => setSelectedImage(index)}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className={`relative aspect-square rounded-xl overflow-hidden transition-all cursor-pointer ${
-                        selectedImage === index
-                          ? 'ring-4 ring-gold shadow-lg'
+                      className={`relative aspect-square rounded-xl overflow-hidden transition-all ${
+                        selectedImage === index 
+                          ? 'ring-4 ring-gold shadow-lg' 
                           : 'ring-2 ring-gray-200 hover:ring-gold'
                       }`}
-                      aria-label={`صورة المنتج ${index + 1}`}
-                      aria-pressed={selectedImage === index}
                     >
                       <Image
                         src={image.src}
@@ -413,17 +297,17 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                 <div className="flex items-end gap-4">
                   <div className="flex items-baseline gap-2">
                     <span className="text-5xl font-bold text-dark">
-                      {priceData.displayPrice.toFixed(2)}
+                      {(hasDiscount ? salePrice : price).toFixed(2)}
                     </span>
                     <span className="text-2xl text-gray-600">ر.س</span>
                   </div>
-                  {priceData.hasDiscount && (
+                  {hasDiscount && (
                     <div className="flex flex-col">
                       <span className="text-xl text-gray-400 line-through">
-                        {priceData.regularPrice.toFixed(2)} ر.س
+                        {regularPrice.toFixed(2)} ر.س
                       </span>
                       <span className="text-sm font-bold text-red-600">
-                        وفّر {priceData.savings} ر.س
+                        وفّر {(regularPrice - salePrice).toFixed(2)} ر.س
                       </span>
                     </div>
                   )}
@@ -432,7 +316,7 @@ export default function ProductPage({ product, relatedProducts, productVariants 
 
               {/* Stock Status */}
               <div className="flex items-center gap-2 bg-white rounded-xl p-4 shadow-lg">
-                {isInStock ? (
+                {product.stock_status === 'instock' ? (
                   <>
                     <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
                     <span className="text-green-600 font-bold">متوفر في المخزون</span>
@@ -452,117 +336,56 @@ export default function ProductPage({ product, relatedProducts, productVariants 
               {product.short_description && (
                 <div
                   className="prose prose-lg text-gray-600 leading-relaxed"
-                  dangerouslySetInnerHTML={{
-                    __html: product.short_description
+                  dangerouslySetInnerHTML={{ 
+                    __html: product.short_description 
                   }}
                 />
               )}
 
-              {/* Product Variants Section */}
-              {hasVariants && (
-                <div className="bg-gray-50 rounded-2xl p-6 space-y-4 border-2 border-gold/20">
-                  <h3 className="text-lg font-bold text-dark flex items-center gap-2">
-                    <span>🎯</span> اختر نوع المنتج
-                  </h3>
-                  <div className="space-y-3">
-                    {productVariants.map((variant) => (
-                      <motion.button
-                        key={variant.id}
-                        onClick={() => setSelectedVariant(variant)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`w-full p-4 rounded-xl transition-all text-right ${
-                          selectedVariant?.id === variant.id
-                            ? 'bg-gold text-dark shadow-lg border-2 border-gold'
-                            : 'bg-white text-dark border-2 border-gray-200 hover:border-gold'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-bold">{variant.name}</p>
-                            {variant.description && (
-                              <p className="text-sm text-gray-600 mt-1">{variant.description}</p>
-                            )}
-                          </div>
-                          {variant.price && variant.price !== product.price && (
-                            <span className="font-bold text-lg">
-                              +{(parseFloat(variant.price) - parseFloat(product.price)).toFixed(2)} ر.س
-                            </span>
-                          )}
-                        </div>
-                        {variant.stock_status !== 'instock' && (
-                          <p className="text-red-600 text-sm mt-2">غير متوفر حالياً</p>
-                        )}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Quantity Selector */}
-              {isInStock && (
+              {product.stock_status === 'instock' && (
                 <div className="flex items-center gap-4">
-                  <label htmlFor="quantity" className="text-lg font-bold">
-                    الكمية:
-                  </label>
+                  <span className="text-lg font-bold">الكمية:</span>
                   <div className="flex items-center bg-gray-100 rounded-xl overflow-hidden shadow-lg">
                     <button
-                      onClick={() => handleQuantityChange(quantity - 1)}
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
                       className="px-6 py-3 hover:bg-gray-200 transition-all font-bold text-xl"
-                      aria-label="تقليل الكمية"
-                      disabled={quantity <= 1}
                     >
                       −
                     </button>
-                    <input
-                      id="quantity"
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
-                      min="1"
-                      max={maxQuantity}
-                      className="px-6 py-3 font-bold text-xl min-w-[60px] text-center bg-white border-0 focus:outline-none focus:ring-2 focus:ring-gold"
-                      aria-label="عدد الكطع"
-                    />
+                    <span className="px-6 py-3 font-bold text-xl min-w-[60px] text-center bg-white">
+                      {quantity}
+                    </span>
                     <button
-                      onClick={() => handleQuantityChange(quantity + 1)}
+                      onClick={() => setQuantity(quantity + 1)}
                       className="px-6 py-3 hover:bg-gray-200 transition-all font-bold text-xl"
-                      aria-label="زيادة الكمية"
-                      disabled={quantity >= maxQuantity}
                     >
                       +
                     </button>
                   </div>
-                  {maxQuantity < 100 && (
-                    <span className="text-sm text-gray-500">الحد الأقصى: {maxQuantity}</span>
-                  )}
                 </div>
               )}
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-4">
-                {isInStock ? (
+                {product.stock_status === 'instock' ? (
                   <>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleBuyNow}
-                      disabled={isLoading || (hasVariants && !selectedVariant)}
-                      className="w-full py-4 rounded-xl font-bold text-lg bg-gold text-dark hover:bg-yellow-500 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label="اشتري الآن"
+                      className="w-full py-4 rounded-xl font-bold text-lg bg-gold text-dark hover:bg-yellow-500 transition-all shadow-lg hover:shadow-xl"
                     >
-                      {isLoading ? '⏳ جاري المعالجة...' : '🚀 اشتري الآن'}
+                      🚀 اشتري الآن
                     </motion.button>
 
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleAddToCart}
-                      disabled={isLoading || (hasVariants && !selectedVariant)}
-                      className="w-full py-4 rounded-xl font-bold text-lg bg-dark text-gold hover:bg-gray-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      aria-label="أضف إلى السلة"
+                      className="w-full py-4 rounded-xl font-bold text-lg bg-dark text-gold hover:bg-gray-800 transition-all shadow-lg"
                     >
-                      {isLoading ? '⏳ جاري المعالجة...' : '🛒 أضف إلى السلة'}
+                      🛒 أضف إلى السلة
                     </motion.button>
 
                     <motion.a
@@ -591,7 +414,7 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">🚚</span>
                   <div>
-                    <p className="font-bold text-dark text-lg">شحن مجاني لأكثر من 199 ريال</p>
+                    <p className="font-bold text-dark text-lg"> شحن مجاني لاكثر من 199 ريال</p>
                     <p className="text-sm text-gray-600">لجميع مناطق المملكة</p>
                   </div>
                 </div>
@@ -599,11 +422,11 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                   <span className="text-3xl">⚡</span>
                   <div>
                     <p className="font-bold text-dark text-lg">تسليم فوري للمنتجات الرقمية</p>
-                    <p className="text-sm text-gray-600">فوري خلال دقائق</p>
+                    <p className="text-sm text-gray-600">فوري  </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">📦</span>
+                  <span className="text-3xl">⚡</span>
                   <div>
                     <p className="font-bold text-dark text-lg">تسليم سريع للمنتجات المادية</p>
                     <p className="text-sm text-gray-600">1-3 أيام عمل</p>
@@ -630,10 +453,10 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                 <p className="text-sm font-bold text-gray-700 mb-3">شارك المنتج:</p>
                 <div className="flex gap-3">
                   {[
-                    { name: 'whatsapp', icon: '📱', color: 'bg-green-600 hover:bg-green-700', label: 'مشاركة عبر واتساب' },
-                    { name: 'twitter', icon: '🐦', color: 'bg-blue-400 hover:bg-blue-500', label: 'مشاركة عبر تويتر' },
-                    { name: 'facebook', icon: '📘', color: 'bg-blue-600 hover:bg-blue-700', label: 'مشاركة عبر فيسبوك' },
-                    { name: 'copy', icon: '📋', color: 'bg-gray-600 hover:bg-gray-700', label: 'نسخ الرابط' }
+                    { name: 'whatsapp', icon: '📱', color: 'bg-green-600 hover:bg-green-700' },
+                    { name: 'twitter', icon: '🐦', color: 'bg-blue-400 hover:bg-blue-500' },
+                    { name: 'facebook', icon: '📘', color: 'bg-blue-600 hover:bg-blue-700' },
+                    { name: 'copy', icon: '📋', color: 'bg-gray-600 hover:bg-gray-700' }
                   ].map((social) => (
                     <motion.button
                       key={social.name}
@@ -641,8 +464,7 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       className={`w-12 h-12 rounded-lg ${social.color} text-white flex items-center justify-center text-xl transition-all shadow-lg`}
-                      aria-label={social.label}
-                      title={social.label}
+                      title={social.name}
                     >
                       {social.icon}
                     </motion.button>
@@ -655,23 +477,22 @@ export default function ProductPage({ product, relatedProducts, productVariants 
           {/* Tabs Section */}
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden mb-16">
             {/* Tab Headers */}
-            <div className="flex border-b border-gray-200 overflow-x-auto">
+            <div className="flex border-b border-gray-200">
               {[
-                { id: 'description', name: 'الوصف الكامل', icon: '📄' },
-                { id: 'specs', name: 'المواصفات', icon: '⚙️' },
-                { id: 'reviews', name: 'التقييمات', icon: '⭐' },
-                { id: 'shipping', name: 'الشحن والإرجاع', icon: '📦' }
-              ].map((tab) => (
+  { id: 'description', name: 'الوصف الكامل', icon: '📄' },
+  { id: 'specs', name: 'المواصفات', icon: '⚙️' },
+  { id: 'reviews', name: 'التقييمات', icon: '⭐' },
+  { id: 'shipping', name: 'الشحن والإرجاع', icon: '📦' }
+].map((tab) => (
+
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-4 px-6 font-bold transition-all whitespace-nowrap ${
+                  className={`flex-1 py-4 px-6 font-bold transition-all ${
                     activeTab === tab.id
                       ? 'bg-gold text-dark shadow-lg'
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
-                  aria-selected={activeTab === tab.id}
-                  role="tab"
                 >
                   <span className="mr-2 text-xl">{tab.icon}</span>
                   {tab.name}
@@ -692,17 +513,16 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                     dangerouslySetInnerHTML={{ __html: product.description }}
                   />
                 )}
-
-                {activeTab === 'reviews' && (
-                  <motion.div
-                    key="reviews"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                  >
-                    <ProductReviews productId={product.id} />
-                  </motion.div>
-                )}
+  {activeTab === 'reviews' && (
+  <motion.div
+    key="reviews"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+  >
+    <ProductReviews productId={product.id} />
+  </motion.div>
+)}
 
                 {activeTab === 'specs' && (
                   <motion.div
@@ -743,9 +563,9 @@ export default function ProductPage({ product, relatedProducts, productVariants 
                       </h3>
                       <ul className="space-y-2 text-gray-600">
                         <li>✓ شحن مجاني للطلبات فوق 199 لجميع مناطق المملكة</li>
-                        <li>✓ تسليم مجاني لطلبات المنتجات الرقمية</li>
+                        <li>✓ تسليم مجاني لطلبات المنتجات الرقمية   </li>
                         <li>✓ التوصيل خلال 1-3 أيام للمنتجات المادية</li>
-                        <li>✓ التسليم خلال 1 ساعة عمل للمنتجات الرقمية</li>
+                        <li>✓ التسليم  خلال 1 ساعة  عمل للمنتجات الرقمسة</li>
                         <li>✓ تتبع الشحنة عبر رقم الطلب</li>
                         <li>✓ التسليم من الأحد إلى الخميس</li>
                       </ul>
@@ -810,18 +630,10 @@ export default function ProductPage({ product, relatedProducts, productVariants 
   );
 }
 
-/**
- * SSR - Server-Side Rendering
- * تحسينات الأداء:
- * 1. جلب المتغيرات من WooCommerce
- * 2. معالجة الأخطاء بشكل أفضل
- * 3. إضافة timeout للطلبات
- * 
- * ملاحظة: استخدمنا getServerSideProps بدلاً من getStaticProps للحصول على بيانات محدثة باستمرار
- */
+// ✅ SSR - Server-Side Rendering
 export async function getServerSideProps({ params }) {
   try {
-    // جلب المنتج الرئيسي
+    // جلب المنتج
     const productResponse = await axios.get(
       `${process.env.NEXT_PUBLIC_WC_API_URL}/products`,
       {
@@ -842,38 +654,6 @@ export async function getServerSideProps({ params }) {
       return {
         notFound: true,
       };
-    }
-
-    // جلب المتغيرات (Variants) إن وجدت
-    let productVariants = [];
-    if (product.type === 'variable') {
-      try {
-        const variantsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${product.id}/variations`,
-          {
-            params: {
-              per_page: 100,
-              status: 'publish'
-            },
-            auth: {
-              username: process.env.WC_CONSUMER_KEY,
-              password: process.env.WC_CONSUMER_SECRET,
-            },
-            timeout: 10000,
-          }
-        );
-        productVariants = variantsResponse.data.map(variant => ({
-          id: variant.id,
-          name: variant.attributes.map(attr => attr.option).join(' - '),
-          description: variant.description || '',
-          price: variant.price || product.price,
-          stock_status: variant.stock_status,
-          stock_quantity: variant.stock_quantity,
-          image: variant.image?.src
-        }));
-      } catch (error) {
-        console.error('Error fetching product variants:', error.message);
-      }
     }
 
     // جلب المنتجات ذات الصلة
@@ -907,7 +687,6 @@ export async function getServerSideProps({ params }) {
       props: {
         product,
         relatedProducts,
-        productVariants,
       },
     };
   } catch (error) {
