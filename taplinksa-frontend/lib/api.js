@@ -1,5 +1,5 @@
 import axios from 'axios';
-//import { getCachedData, setCachedData } from './cache';
+import { getCachedData, setCachedData } from './cache';
 
 const WP_API_URL = process.env.NEXT_PUBLIC_WP_API_URL;
 const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL;
