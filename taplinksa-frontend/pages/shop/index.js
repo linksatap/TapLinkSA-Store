@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NextSeo } from 'next-seo';
+//import { NextSeo } from 'next-seo';
 import Layout from '../../components/layout/Layout';
 import ProductsGrid from '../../components/products/ProductsGrid';
 import Pagination from '../../components/Pagination';
