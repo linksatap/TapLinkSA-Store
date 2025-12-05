@@ -269,7 +269,7 @@ export async function getServerSideProps({ params, req }) {
 
     // Fetch product by slug
     const [productRes, relatedRes] = await Promise.all([
-      fetch(`${WC_API_URL}/products?slug=${slug}`, { headers }),
+      fetch(`${WC_API_URL}/products?slug=${encodeURIComponent(slug)}`, { headers }),
       fetch(`${WC_API_URL}/products?per_page=4&orderby=popularity`, { headers }).catch(
         () => ({
           json: async () => [],
@@ -291,7 +291,6 @@ export async function getServerSideProps({ params, req }) {
           product: { error: true },
           relatedProducts: [],
         },
-        revalidate: 60, // Revalidate after 60 seconds
       };
     }
 
@@ -300,7 +299,6 @@ export async function getServerSideProps({ params, req }) {
         product,
         relatedProducts: Array.isArray(relatedProducts) ? relatedProducts.slice(0, 4) : [],
       },
-      revalidate: 3600, // Revalidate every hour
     };
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -309,7 +307,6 @@ export async function getServerSideProps({ params, req }) {
         product: { error: true },
         relatedProducts: [],
       },
-      revalidate: 60,
     };
   }
 }
