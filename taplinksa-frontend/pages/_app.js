@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-//import AOS from 'aos';
-//import 'aos/dist/aos.css';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import '../styles/globals.css';
 import { CartProvider } from '../context/CartContext';
 import { UserProvider } from '../context/UserContext';
