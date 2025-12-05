@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-//import { NextSeo, BreadcrumbJsonLd } from 'next-seo';
+import Head from 'next/head';
 import Layout from '../../components/layout/Layout';
-import ProductsGrid from '../../components/shop/ProductsGrid';
+import ProductsGrid from '../../components/products/ProductsGrid';
 import Pagination from '../../components/Pagination';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,7 +20,7 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
   const perPage = 20;
   const totalPages = Math.ceil(totalProducts / perPage);
 
-  // Scroll detection for "Back to Top" button
+  // Scroll detection
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 500);
@@ -29,7 +29,7 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Fetch products function
+  // Fetch products
   const fetchProducts = async (page = 1, category = '', sort = 'date', search = '') => {
     setLoading(true);
     
@@ -45,8 +45,8 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
       const response = await fetch(`/api/products?${params}`);
       const data = await response.json();
 
-      setProducts(data.products);
-      setTotalProducts(data.total);
+      setProducts(data.products || []);
+      setTotalProducts(data.total || 0);
       setCurrentPage(page);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -56,7 +56,6 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
     }
   };
 
-  // Category change handler
   const handleCategoryChange = (categoryId) => {
     setCurrentCategory(categoryId);
     setCurrentPage(1);
@@ -64,20 +63,17 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
     scrollToTop();
   };
 
-  // Sort change handler
   const handleSortChange = (sort) => {
     setSortBy(sort);
     fetchProducts(currentPage, currentCategory, sort, searchTerm);
   };
 
-  // Search submit handler
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1);
     fetchProducts(1, currentCategory, sortBy, searchTerm);
   };
 
-  // Reset filters
   const resetFilters = () => {
     setCurrentCategory('');
     setSearchTerm('');
@@ -86,12 +82,10 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
     fetchProducts(1, '', 'date', '');
   };
 
-  // Scroll to top
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Active filters count
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (currentCategory) count++;
@@ -100,7 +94,6 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
     return count;
   }, [currentCategory, searchTerm, sortBy]);
 
-  // Current category name
   const currentCategoryName = useMemo(() => {
     const cat = categories.find(c => c.id === currentCategory);
     return cat?.name || 'جميع المنتجات';
@@ -108,50 +101,52 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
 
   return (
     <Layout title={`المتجر - ${currentCategoryName} | تاب لينك السعودية`}>
-      {/* SEO */}
-      <NextSeo
-        title={`متجر تاب لينك - ${currentCategoryName}`}
-        description="تسوق أفضل الاشتراكات الرقمية وبطاقات الألعاب بأسعار منافسة مع توصيل فوري"
-        canonical="https://taplinksa.com/shop"
-        openGraph={{
-          type: 'website',
-          url: 'https://taplinksa.com/shop',
-          title: `متجر تاب لينك - ${currentCategoryName}`,
-          description: 'تسوق أفضل الاشتراكات الرقمية وبطاقات الألعاب',
-          images: [
-            {
-              url: 'https://taplinksa.com/og-shop.jpg',
-              width: 1200,
-              height: 630,
-              alt: 'متجر تاب لينك السعودية',
-            },
-          ],
-        }}
-      />
-
-      {/* Breadcrumb Schema */}
-      <BreadcrumbJsonLd
-        itemListElements={[
-          {
-            position: 1,
-            name: 'الرئيسية',
-            item: 'https://taplinksa.com',
-          },
-          {
-            position: 2,
-            name: 'المتجر',
-            item: 'https://taplinksa.com/shop',
-          },
-          ...(currentCategory ? [{
-            position: 3,
-            name: currentCategoryName,
-            item: `https://taplinksa.com/shop?category=${currentCategory}`,
-          }] : []),
-        ]}
-      />
+      <Head>
+        <title>متجر تاب لينك - {currentCategoryName}</title>
+        <meta 
+          name="description" 
+          content="تسوق أفضل الاشتراكات الرقمية وبطاقات الألعاب بأسعار منافسة مع توصيل فوري" 
+        />
+        <link rel="canonical" href="https://taplinksa.com/shop" />
+        
+        {/* OpenGraph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://taplinksa.com/shop" />
+        <meta property="og:title" content={`متجر تاب لينك - ${currentCategoryName}`} />
+        <meta property="og:description" content="تسوق أفضل الاشتراكات الرقمية وبطاقات الألعاب" />
+        <meta property="og:image" content="https://taplinksa.com/og-shop.jpg" />
+        
+        {/* Breadcrumb Schema */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "الرئيسية",
+                "item": "https://taplinksa.com"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "المتجر",
+                "item": "https://taplinksa.com/shop"
+              },
+              ...(currentCategory ? [{
+                "@type": "ListItem",
+                "position": 3,
+                "name": currentCategoryName,
+                "item": `https://taplinksa.com/shop?category=${currentCategory}`
+              }] : [])
+            ]
+          })}
+        </script>
+      </Head>
 
       <div className="bg-gradient-to-br from-gold/5 via-white to-gray-50 min-h-screen">
-        {/* Header Section */}
+        {/* Header */}
         <div className="bg-gradient-to-r from-gold via-gold-dark to-gold py-8 md:py-12">
           <div className="container-custom px-4 md:px-8">
             <motion.div
@@ -170,15 +165,14 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
         </div>
 
         <div className="container-custom px-3 md:px-8 py-4 md:py-8">
-          {/* Search & Filter Bar - Sticky */}
+          {/* Search & Filter Bar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl md:rounded-2xl shadow-lg p-3 md:p-6 mb-4 md:mb-8 sticky top-14 md:top-16 z-40"
           >
-            {/* Desktop Layout */}
+            {/* Desktop */}
             <div className="hidden md:flex items-center gap-4">
-              {/* Search */}
               <form onSubmit={handleSearch} className="flex-1">
                 <div className="relative">
                   <input
@@ -190,65 +184,56 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
                   />
                   <button
                     type="submit"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-gray-400 hover:text-gold transition-colors"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-gray-400 hover:text-gold"
                   >
                     🔍
                   </button>
                 </div>
               </form>
 
-              {/* Sort */}
               <select
                 value={sortBy}
                 onChange={(e) => handleSortChange(e.target.value)}
-                className="px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all bg-white text-sm min-w-[160px]"
+                className="px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-gold outline-none bg-white text-sm min-w-[160px]"
               >
                 <option value="date">الأحدث</option>
                 <option value="popularity">الأكثر مبيعاً</option>
                 <option value="price">السعر: من الأقل</option>
                 <option value="price-desc">السعر: من الأعلى</option>
-                <option value="rating">الأعلى تقييماً</option>
               </select>
 
-              {/* Reset Filters */}
               {activeFiltersCount > 0 && (
                 <button
                   onClick={resetFilters}
-                  className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-sm transition-colors whitespace-nowrap"
+                  className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-sm"
                 >
-                  مسح الفلاتر ({activeFiltersCount})
+                  مسح ({activeFiltersCount})
                 </button>
               )}
             </div>
 
-            {/* Mobile Layout */}
+            {/* Mobile */}
             <div className="md:hidden space-y-3">
-              {/* Search */}
               <form onSubmit={handleSearch}>
                 <div className="relative">
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="ابحث عن منتج..."
-                    className="w-full pl-10 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all text-sm"
+                    placeholder="ابحث..."
+                    className="w-full pl-10 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:border-gold outline-none text-sm"
                   />
-                  <button
-                    type="submit"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 text-lg text-gray-400"
-                  >
+                  <button type="submit" className="absolute left-2 top-1/2 -translate-y-1/2 text-lg">
                     🔍
                   </button>
                 </div>
               </form>
 
-              {/* Filters Row */}
               <div className="flex gap-2">
-                {/* Sort */}
                 <select
                   value={sortBy}
                   onChange={(e) => handleSortChange(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-gold outline-none text-sm"
+                  className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 outline-none text-sm"
                 >
                   <option value="date">الأحدث</option>
                   <option value="popularity">الأكثر مبيعاً</option>
@@ -256,10 +241,9 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
                   <option value="price-desc">السعر ↓</option>
                 </select>
 
-                {/* Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="relative bg-gold text-white px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap"
+                  className="relative bg-gold text-white px-4 py-2 rounded-lg font-bold text-sm"
                 >
                   الفئات
                   {activeFiltersCount > 0 && (
@@ -271,45 +255,26 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
               </div>
             </div>
 
-            {/* Results Count */}
-            <div className="mt-3 md:mt-4 text-xs md:text-sm text-gray-600 flex items-center justify-between">
-              <div>
-                عرض <strong className="text-gold">{products.length}</strong> من أصل{' '}
-                <strong className="text-gold">{totalProducts}</strong> منتج
-              </div>
-              {activeFiltersCount > 0 && (
-                <button
-                  onClick={resetFilters}
-                  className="text-gold hover:underline md:hidden"
-                >
-                  × مسح
-                </button>
-              )}
+            <div className="mt-3 text-xs md:text-sm text-gray-600">
+              عرض <strong className="text-gold">{products.length}</strong> من أصل{' '}
+              <strong className="text-gold">{totalProducts}</strong> منتج
             </div>
           </motion.div>
 
-          {/* Main Grid Layout */}
+          {/* Grid */}
           <div className="grid lg:grid-cols-4 gap-4 md:gap-8">
-            {/* Sidebar Filters - Desktop */}
+            {/* Sidebar - Desktop */}
             <aside className="hidden lg:block lg:col-span-1">
               <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-36">
-                <h2 className="text-xl font-bold mb-4 flex items-center justify-between">
-                  <span>التصنيفات</span>
-                  {activeFiltersCount > 0 && (
-                    <span className="text-xs bg-gold text-white px-2 py-1 rounded-full">
-                      {activeFiltersCount}
-                    </span>
-                  )}
-                </h2>
-                
-                <ul className="space-y-2 mb-6">
+                <h2 className="text-xl font-bold mb-4">التصنيفات</h2>
+                <ul className="space-y-2">
                   <li>
                     <button
                       onClick={() => handleCategoryChange('')}
-                      className={`w-full text-right px-4 py-2.5 rounded-lg transition-all text-sm font-medium ${
+                      className={`w-full text-right px-4 py-2.5 rounded-lg text-sm ${
                         !currentCategory
-                          ? 'bg-gold text-white shadow-md'
-                          : 'hover:bg-gray-100 text-gray-700'
+                          ? 'bg-gold text-white'
+                          : 'hover:bg-gray-100'
                       }`}
                     >
                       🏠 جميع المنتجات
@@ -319,84 +284,50 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
                     <li key={cat.id}>
                       <button
                         onClick={() => handleCategoryChange(cat.id)}
-                        className={`w-full text-right px-4 py-2.5 rounded-lg transition-all text-sm flex items-center justify-between ${
+                        className={`w-full text-right px-4 py-2.5 rounded-lg text-sm flex justify-between ${
                           currentCategory === cat.id
-                            ? 'bg-gold text-white shadow-md font-bold'
-                            : 'hover:bg-gray-100 text-gray-700'
+                            ? 'bg-gold text-white font-bold'
+                            : 'hover:bg-gray-100'
                         }`}
                       >
                         <span>{cat.name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          currentCategory === cat.id
-                            ? 'bg-white/20'
-                            : 'bg-gray-200'
-                        }`}>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/20">
                           {cat.count}
                         </span>
                       </button>
                     </li>
                   ))}
                 </ul>
-
-                {/* Trust Badges */}
-                <div className="space-y-4 pt-6 border-t text-sm">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">🚚</span>
-                    <div>
-                      <p className="font-bold text-dark">توصيل سريع</p>
-                      <p className="text-gray-600 text-xs">1-3 أيام عمل</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">🔒</span>
-                    <div>
-                      <p className="font-bold text-dark">دفع آمن</p>
-                      <p className="text-gray-600 text-xs">معاملات محمية 100%</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">↩️</span>
-                    <div>
-                      <p className="font-bold text-dark">إرجاع مجاني</p>
-                      <p className="text-gray-600 text-xs">خلال 14 يوم</p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </aside>
 
-            {/* Mobile Filter Drawer */}
+            {/* Mobile Drawer */}
             <AnimatePresence>
               {showFilters && (
                 <>
-                  {/* Backdrop */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={() => setShowFilters(false)}
-                    className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+                    className="lg:hidden fixed inset-0 bg-black/50 z-40"
                   />
-
-                  {/* Drawer */}
                   <motion.div
                     initial={{ x: '100%' }}
                     animate={{ x: 0 }}
                     exit={{ x: '100%' }}
-                    transition={{ type: 'tween', duration: 0.3 }}
-                    className="lg:hidden fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-2xl z-50 overflow-y-auto"
+                    className="lg:hidden fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white z-50 overflow-y-auto"
                   >
                     <div className="p-4">
-                      <div className="flex items-center justify-between mb-6">
+                      <div className="flex justify-between mb-6">
                         <h2 className="text-xl font-bold">الفئات</h2>
                         <button
                           onClick={() => setShowFilters(false)}
-                          className="text-2xl text-gray-400 hover:text-gray-600"
+                          className="text-2xl text-gray-400"
                         >
                           ×
                         </button>
                       </div>
-
                       <ul className="space-y-2">
                         <li>
                           <button
@@ -404,10 +335,8 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
                               handleCategoryChange('');
                               setShowFilters(false);
                             }}
-                            className={`w-full text-right px-4 py-3 rounded-lg transition-all ${
-                              !currentCategory
-                                ? 'bg-gold text-white font-bold'
-                                : 'bg-gray-100 hover:bg-gray-200'
+                            className={`w-full text-right px-4 py-3 rounded-lg ${
+                              !currentCategory ? 'bg-gold text-white' : 'bg-gray-100'
                             }`}
                           >
                             🏠 جميع المنتجات
@@ -420,20 +349,11 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
                                 handleCategoryChange(cat.id);
                                 setShowFilters(false);
                               }}
-                              className={`w-full text-right px-4 py-3 rounded-lg transition-all flex items-center justify-between ${
-                                currentCategory === cat.id
-                                  ? 'bg-gold text-white font-bold'
-                                  : 'bg-gray-100 hover:bg-gray-200'
+                              className={`w-full text-right px-4 py-3 rounded-lg ${
+                                currentCategory === cat.id ? 'bg-gold text-white' : 'bg-gray-100'
                               }`}
                             >
-                              <span>{cat.name}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                currentCategory === cat.id
-                                  ? 'bg-white/20'
-                                  : 'bg-gray-300'
-                              }`}>
-                                {cat.count}
-                              </span>
+                              {cat.name} ({cat.count})
                             </button>
                           </li>
                         ))}
@@ -444,13 +364,12 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
               )}
             </AnimatePresence>
 
-            {/* Products Grid */}
+            {/* Products */}
             <div className="lg:col-span-3">
               <ProductsGrid products={products} loading={loading} />
 
-              {/* Pagination */}
               {!loading && totalPages > 1 && (
-                <div className="mt-8 md:mt-12">
+                <div className="mt-8">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -465,16 +384,15 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
           </div>
         </div>
 
-        {/* Scroll to Top Button */}
+        {/* Scroll to Top */}
         <AnimatePresence>
           {showScrollTop && (
             <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={scrollToTop}
-              className="fixed bottom-6 left-6 bg-gold text-white p-4 rounded-full shadow-2xl hover:bg-gold-dark transition-colors z-50 text-xl"
-              aria-label="العودة للأعلى"
+              className="fixed bottom-6 left-6 bg-gold text-white p-4 rounded-full shadow-2xl z-50"
             >
               ↑
             </motion.button>
@@ -485,12 +403,16 @@ export default function Shop({ initialProducts, initialCategories, initialTotal 
   );
 }
 
-// Server-side data fetching
-export async function getServerSideProps() {
+export async function getServerSideProps({ req }) {
   try {
+    // استخدام الـ host من الـ request
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'taplinksa.com';
+    const baseUrl = `${protocol}://${host}`;
+
     const [productsRes, categoriesRes] = await Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products?per_page=20&page=1`),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`),
+      fetch(`${baseUrl}/api/products?per_page=20&page=1`),
+      fetch(`${baseUrl}/api/categories`),
     ]);
 
     const productsData = await productsRes.json();
