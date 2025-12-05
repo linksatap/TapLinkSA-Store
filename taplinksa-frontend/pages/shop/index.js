@@ -1,316 +1,428 @@
-import { useState, useEffect } from 'react';
-import Head from 'next/head';
-import { useRouter } from 'next/router';
+import { useState } from 'react';
+import { getProducts } from '../../lib/api'; // استيراد دالة جلب المنتجات
+import axios from 'axios';
+import { getCategories } from '../../lib/api'; // استيراد دالة جلب الفئات
 import Layout from '../../components/layout/Layout';
-import ProductsGrid from '../../components/shop/ProductsGrid';
-import Pagination from '../../components/Pagination';
+import ProductCard from '../../components/shop/ProductCard';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
 
-export default function Shop({ initialProducts, initialCategories, initialTotal }) {
-  const router = useRouter();
+export default function Shop({ initialProducts, initialTotal, initialTotalPages, categories }) {
   const [products, setProducts] = useState(initialProducts);
-  const [categories] = useState(initialCategories);
-  const [loading, setLoading] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState(''); // ✅ حالة الفئة الحالية
+  const [currentSortBy, setCurrentSortBy] = useState('date'); // ✅ حالة الترتيب الحالية
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalProducts, setTotalProducts] = useState(initialTotal);
-  const [currentCategory, setCurrentCategory] = useState('');
-  const [sortBy, setSortBy] = useState('date');
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [loading, setLoading] = useState(false);
+
+
   const [searchTerm, setSearchTerm] = useState('');
 
-  const perPage = 20;
-  const totalPages = Math.ceil(totalProducts / perPage);
-
-  // Fetch products
-  const fetchProducts = async (page = 1, category = '', sort = 'date', search = '') => {
+  const fetchProducts = async (page, category = currentCategory, sort = currentSortBy, search = searchTerm) => {
     setLoading(true);
     
+    let order = 'desc'; // القيمة الافتراضية للترتيب (تنازلي)
+    let orderby = sort;
+    
+    // منطق خاص للترتيب حسب السعر
+    if (sort === 'price') {
+      order = 'asc'; // السعر: الأقل أولاً (تصاعدي)
+      orderby = 'price';
+    } else if (sort === 'price-desc') {
+      order = 'desc'; // السعر: الأعلى أولاً (تنازلي)
+      orderby = 'price';
+    } else if (sort === 'popularity' || sort === 'rating') {
+      order = 'desc'; // الأكثر مبيعاً والأعلى تقييماً (تنازلي)
+    }
+    
     try {
-      const params = new URLSearchParams({
-        page,
-        per_page: perPage,
-        orderby: sort,
-        ...(category && { category }),
-        ...(search && { search }),
-      });
-
-      const response = await fetch(`/api/products?${params}`);
+      const response = await fetch(
+        `/api/products?page=${page}&per_page=12&category=${category}&orderby=${orderby}&order=${order}&search=${search}`
+      );
       const data = await response.json();
-
-      setProducts(data.products || []);
-      setTotalProducts(data.total || 0);
-      setCurrentPage(page);
+      
+      if (data.products) {
+        // إذا كانت الصفحة 1، نستبدل المنتجات. وإلا، نضيفها (منطق التحميل الإضافي)
+        if (page === 1) {
+          setProducts(data.products);
+        } else {
+          setProducts(prev => [...prev, ...data.products]);
+        }
+        setTotalPages(data.totalPages);
+        setCurrentPage(page);
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
-      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCategoryChange = (categoryId) => {
-    setCurrentCategory(categoryId);
-    setCurrentPage(1);
-    fetchProducts(1, categoryId, sortBy, searchTerm);
+  const handlePageChange = (page) => {
+    fetchProducts(page, selectedCategory, sortBy, searchTerm);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleCategoryChange = (categoryId) => {
+    setCurrentCategory(categoryId);
+    setCurrentPage(1);
+    fetchProducts(1, categoryId, currentSortBy, searchTerm);
+  };
+
   const handleSortChange = (sort) => {
-    setSortBy(sort);
-    fetchProducts(currentPage, currentCategory, sort, searchTerm);
+    setCurrentSortBy(sort);
+    setCurrentPage(1);
+    fetchProducts(1, currentCategory, sort, searchTerm);
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchProducts(1, currentCategory, sortBy, searchTerm);
+    fetchProducts(1, currentCategory, currentSortBy, searchTerm);
   };
-
-  const resetFilters = () => {
-    setCurrentCategory('');
-    setSearchTerm('');
-    setSortBy('date');
-    setCurrentPage(1);
-    fetchProducts(1, '', 'date', '');
-  };
-
-  const currentCategoryName = categories.find(c => c.id === currentCategory)?.name || 'جميع المنتجات';
-  const activeFiltersCount = [currentCategory, searchTerm, sortBy !== 'date'].filter(Boolean).length;
 
   return (
-    <Layout title={`المتجر - ${currentCategoryName} | تاب لينك السعودية`}>
-      <Head>
-        <title>متجر تاب لينك - {currentCategoryName}</title>
-        <meta 
-          name="description" 
-          content="تسوق أفضل الاشتراكات الرقمية وبطاقات الألعاب بأسعار منافسة مع توصيل فوري" 
-        />
-      </Head>
+    <Layout
+      title="المتجر | تاب لينك "
+      description="تسوق بطاقات NFC الذكية والحوامل الذكية من تاب لينك السعودية"
+    >
+      <div className="container-custom section-padding">
+        
+        {/* Breadcrumb */}
+        <nav className="mb-8 text-sm" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-2">
+            <li>
+              <Link href="/" className="text-gray-600 hover:text-gold transition-colors">
+                الرئيسية
+              </Link>
+            </li>
+            <li className="text-gray-400">/</li>
+            <li className="text-gold font-bold">المتجر</li>
+          </ol>
+        </nav>
 
-      <div className="min-h-screen bg-gradient-to-br from-gold/5 via-white to-gray-50">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-gold via-gold-dark to-gold py-8 md:py-12">
-          <div className="container mx-auto px-4 md:px-8">
-            <div className="text-center text-white" data-aos="fade-up">
-              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-4">
-                {currentCategoryName}
-              </h1>
-              <p className="text-sm md:text-lg opacity-90">
-                اكتشف أفضل المنتجات الرقمية والاشتراكات
+        {/* Banner for Digital Subscriptions */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between shadow-lg"
+        >
+          <div className="flex items-center gap-4 mb-4 md:mb-0">
+            <span className="text-4xl">💎</span>
+            <div>
+              <h3 className="text-blue-900 font-bold text-lg mb-1">
+                اشتراكات رقمية مميزة
+              </h3>
+              <p className="text-blue-700 text-sm">
+                تبحث عن Canva Pro، Netflix، أو اشتراكات أخرى؟ تصفح قسمنا الخاص
               </p>
             </div>
           </div>
+          <Link
+            href="/subscriptions"
+            className="btn-primary bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
+          >
+            الاشتراكات الرقمية ←
+          </Link>
+        </motion.div>
+
+        {/* Page Header */}
+        <div className="text-center mb-12">
+          <motion.h1 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl md:text-5xl font-bold mb-4"
+          >
+            متجر تاب لينك السعودية
+          </motion.h1>
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: 96 }}
+            transition={{ delay: 0.2 }}
+            className="h-1 bg-gold mx-auto mb-6"
+          ></motion.div>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-gray-600 text-lg max-w-2xl mx-auto"
+          >
+            اكتشف مجموعتنا المميزة من البطاقات الذكية والحوامل المبتكرة
+          </motion.p>
         </div>
 
-        <div className="container mx-auto px-4 md:px-8 py-6 md:py-8">
-          {/* Search & Filters Bar */}
-          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6 md:mb-8" data-aos="fade-up">
-            {/* Desktop Layout */}
-            <div className="hidden md:flex items-center gap-4 mb-4">
-              <form onSubmit={handleSearch} className="flex-1">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="ابحث عن منتج..."
-                    className="w-full pl-12 pr-4 py-3 rounded-lg border-2 border-gray-200 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-gray-400 hover:text-gold transition-colors"
-                  >
-                    🔍
-                  </button>
-                </div>
-              </form>
-
-              <select
-                value={sortBy}
-                onChange={(e) => handleSortChange(e.target.value)}
-                className="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-gold outline-none bg-white min-w-[160px]"
-              >
-                <option value="date">الأحدث</option>
-                <option value="popularity">الأكثر مبيعاً</option>
-                <option value="price">السعر: من الأقل</option>
-                <option value="price-desc">السعر: من الأعلى</option>
-              </select>
-
-              {activeFiltersCount > 0 && (
-                <button
-                  onClick={resetFilters}
-                  className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg font-bold text-sm whitespace-nowrap transition-colors"
-                >
-                  مسح الفلاتر ({activeFiltersCount})
-                </button>
-              )}
-            </div>
-
-            {/* Mobile Layout */}
-            <div className="md:hidden space-y-3 mb-4">
-              <form onSubmit={handleSearch}>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="ابحث عن منتج..."
-                    className="w-full pl-10 pr-3 py-2.5 rounded-lg border-2 border-gray-200 focus:border-gold outline-none text-sm"
-                  />
-                  <button type="submit" className="absolute left-2 top-1/2 -translate-y-1/2 text-lg">
-                    🔍
-                  </button>
-                </div>
-              </form>
-
-              <div className="flex gap-2">
-                <select
-                  value={sortBy}
-                  onChange={(e) => handleSortChange(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 outline-none text-sm"
-                >
-                  <option value="date">الأحدث</option>
-                  <option value="popularity">الأكثر مبيعاً</option>
-                  <option value="price">السعر ↑</option>
-                  <option value="price-desc">السعر ↓</option>
-                </select>
-
-                {activeFiltersCount > 0 && (
-                  <button
-                    onClick={resetFilters}
-                    className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap"
-                  >
-                    مسح ({activeFiltersCount})
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Categories - Horizontal Scroll on Mobile */}
+        {/* Search Bar */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-8"
+        >
+          <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
             <div className="relative">
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-                <button
-                  onClick={() => handleCategoryChange('')}
-                  className={`px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all snap-start ${
-                    !currentCategory
-                      ? 'bg-gold text-white shadow-md'
-                      : 'bg-gray-100 hover:bg-gray-200 text-dark'
-                  }`}
-                >
-                  🏠 الكل
-                </button>
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleCategoryChange(cat.id)}
-                    className={`px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all snap-start ${
-                      currentCategory === cat.id
-                        ? 'bg-gold text-white shadow-md'
-                        : 'bg-gray-100 hover:bg-gray-200 text-dark'
-                    }`}
-                  >
-                    {cat.name}
-                    <span className={`mr-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                      currentCategory === cat.id ? 'bg-white/20' : 'bg-gray-300'
-                    }`}>
-                      {cat.count}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="🔍 ابحث عن المنتجات..."
+                className="w-full px-6 py-4 rounded-xl border-2 border-gray-300 focus:border-gold outline-none text-lg transition-all shadow-lg"
+              />
+              <button
+                type="submit"
+                className="absolute left-2 top-1/2 -translate-y-1/2 px-6 py-2 bg-gold text-dark font-bold rounded-lg hover:bg-yellow-500 transition-all"
+              >
+                بحث
+              </button>
             </div>
+          </form>
+        </motion.div>
 
-            {/* Results Counter */}
-            <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm">
-              <div className="text-gray-600">
-                عرض <strong className="text-gold font-bold">{products.length}</strong> من أصل{' '}
-                <strong className="text-gold font-bold">{totalProducts}</strong> منتج
-              </div>
-              {loading && (
-                <div className="flex items-center gap-2 text-gold">
-                  <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-xs font-medium">جاري التحميل...</span>
-                </div>
-              )}
-            </div>
+        {/* Filters Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-white rounded-2xl shadow-lg p-6">
+          
+          {/* Categories */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleCategoryChange('')}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                currentCategory === '' 
+                  ? 'bg-gold text-dark shadow-lg scale-105' 
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              الكل ({initialTotal})
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryChange(cat.id)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  currentCategory === cat.id.toString() 
+                    ? 'bg-gold text-dark shadow-lg scale-105' 
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                {cat.name} ({cat.count})
+              </button>
+            ))}
           </div>
 
-          {/* Products Grid */}
-          <div data-aos="fade-up">
-            <ProductsGrid products={products} loading={loading} />
+          {/* Sort */}
+          <div className="flex items-center gap-3">
+            <label className="font-medium text-gray-700">ترتيب:</label>
+            <select
+              value={currentSortBy}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="px-4 py-2 rounded-lg border-2 border-gray-300 focus:border-gold outline-none bg-white cursor-pointer font-medium"
+            >
+              <option value="date">الأحدث</option>
+              <option value="popularity">الأكثر مبيعاً</option>
+              <option value="rating">الأعلى تقييماً</option>
+              <option value="price">السعر: الأقل أولاً</option>
+              <option value="price-desc">السعر: الأعلى أولاً</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="mb-6">
+          <p className="text-gray-600">
+            <span className="font-bold text-gold">{products.length}</span> من أصل{' '}
+            <span className="font-bold">{initialTotal}</span> منتج
+          </p>
+        </div>
+
+        {/* Products Grid */}
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i} 
+                className="bg-gray-200 rounded-2xl animate-pulse" 
+                style={{ height: '500px' }} 
+              />
+            ))}
+          </div>
+        ) : products.length > 0 ? (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+              {products.map((product, index) => (
+                <ProductCard key={product.id} product={product} index={index} />
+              ))}
+            </div>
 
             {/* Pagination */}
-            {!loading && totalPages > 1 && (
-              <div className="mt-8 md:mt-12">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={(page) => {
-                    fetchProducts(page, currentCategory, sortBy, searchTerm);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                />
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                
+                {/* Previous */}
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  السابق
+                </button>
+
+                {/* Page Numbers */}
+                {[...Array(totalPages)].map((_, index) => {
+                  const page = index + 1;
+                  
+                  // عرض الصفحات القريبة فقط
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 2 && page <= currentPage + 2)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-4 py-2 rounded-lg border transition-all ${
+                          currentPage === page
+                            ? 'bg-gold text-dark border-gold font-bold shadow-lg'
+                            : 'border-gray-300 hover:bg-gray-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  } else if (
+                    page === currentPage - 3 ||
+                    page === currentPage + 3
+                  ) {
+                    return <span key={page} className="px-2">...</span>;
+                  }
+                  return null;
+                })}
+
+                {/* Next */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  التالي
+                </button>
               </div>
             )}
-          </div>
+          </>
+        ) : (
+          <div className="text-center py-20">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="text-8xl mb-6"
+            >
+              🔍
+            </motion.div>
+            <h2 className="text-3xl font-bold mb-4">لا توجد منتجات</h2>
+            <p className="text-gray-600 mb-8 text-lg">
+              {searchTerm 
+                ? `لم نجد نتائج لـ "${searchTerm}"`
+                : 'لا توجد منتجات في هذا القسم حالياً'
+              }
+            </p>
+            {(searchTerm || currentCategory) && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
 
-          {/* Trust Badges */}
-          {!loading && products.length > 0 && (
-            <div className="mt-12 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6" data-aos="fade-up">
-              <div className="bg-white rounded-lg p-4 text-center shadow-md">
-                <div className="text-3xl mb-2">🚚</div>
-                <h3 className="font-bold text-sm md:text-base mb-1">توصيل سريع</h3>
-                <p className="text-xs text-gray-600">خلال 2-3 أيام عمل</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 text-center shadow-md">
-                <div className="text-3xl mb-2">🔒</div>
-                <h3 className="font-bold text-sm md:text-base mb-1">دفع آمن</h3>
-                <p className="text-xs text-gray-600">معاملات محمية 100%</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 text-center shadow-md">
-                <div className="text-3xl mb-2">↩️</div>
-                <h3 className="font-bold text-sm md:text-base mb-1">إرجاع مجاني</h3>
-                <p className="text-xs text-gray-600">خلال 14 يوم من الاستلام</p>
-              </div>
-              <div className="bg-white rounded-lg p-4 text-center shadow-md">
-                <div className="text-3xl mb-2">💬</div>
-                <h3 className="font-bold text-sm md:text-base mb-1">دعم 24/7</h3>
-                <p className="text-xs text-gray-600">نحن هنا لمساعدتك دائماً</p>
-              </div>
-            </div>
-          )}
+                  setCurrentCategory('');
+                  fetchProducts(1, '', currentSortBy, '');
+                }}
+                className="btn-primary"
+              >
+                عرض جميع المنتجات
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Features Section */}
+        <div className="mt-20 grid md:grid-cols-4 gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white rounded-xl shadow-lg p-6 text-center"
+          >
+            <div className="text-4xl mb-3">🚚</div>
+            <h3 className="font-bold text-lg mb-2">شحن سريع</h3>
+            <p className="text-sm text-gray-600">توصيل خلال 2-3 أيام عمل</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl shadow-lg p-6 text-center"
+          >
+            <div className="text-4xl mb-3">🔒</div>
+            <h3 className="font-bold text-lg mb-2">دفع آمن</h3>
+            <p className="text-sm text-gray-600">معاملات محمية 100%</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-xl shadow-lg p-6 text-center"
+          >
+            <div className="text-4xl mb-3">↩️</div>
+            <h3 className="font-bold text-lg mb-2">إرجاع مجاني</h3>
+            <p className="text-sm text-gray-600">خلال 14 يوم من الاستلام</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="bg-white rounded-xl shadow-lg p-6 text-center"
+          >
+            <div className="text-4xl mb-3">💬</div>
+            <h3 className="font-bold text-lg mb-2">دعم 24/7</h3>
+            <p className="text-sm text-gray-600">نحن هنا لمساعدتك دائماً</p>
+          </motion.div>
         </div>
+
       </div>
     </Layout>
   );
 }
 
-export async function getServerSideProps({ req }) {
+// ✅ SSR - Server-Side Rendering
+export async function getServerSideProps() {
   try {
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const host = req.headers['x-forwarded-host'] || req.headers.host || 'taplinksa.com';
-    const baseUrl = `${protocol}://${host}`;
+    // جلب المنتجات باستخدام الدالة المحسّنة والمخزنة مؤقتاً
+    const { products: initialProducts, total: initialTotal, totalPages: initialTotalPages } = await getProducts(1, 12, {
+      status: 'publish',
+      orderby: 'date',
+      order: 'desc',
+    });
 
-    const [productsRes, categoriesRes] = await Promise.all([
-      fetch(`${baseUrl}/api/products?per_page=20&page=1`),
-      fetch(`${baseUrl}/api/categories`),
-    ]);
-
-    const productsData = await productsRes.json();
-    const categoriesData = await categoriesRes.json();
+    // جلب الفئات باستخدام الدالة المحسّنة والمخزنة مؤقتاً
+    const categories = await getCategories();
 
     return {
       props: {
-        initialProducts: productsData.products || [],
-        initialCategories: categoriesData.categories || [],
-        initialTotal: productsData.total || 0,
+        initialProducts,
+        initialTotal,
+        initialTotalPages,
+        categories,
       },
     };
   } catch (error) {
-    console.error('Error fetching shop data:', error);
+    console.error('Error in SSR:', error.message);
     return {
       props: {
         initialProducts: [],
-        initialCategories: [],
         initialTotal: 0,
+        initialTotalPages: 0,
+        categories: [],
       },
     };
   }
