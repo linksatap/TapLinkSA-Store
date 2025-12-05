@@ -1,6 +1,4 @@
-// components/product/index.js
-// Barrel Export - Centralized imports for all product components
-
+export { default as ProductSkeleton } from './ProductSkeleton';
 export { default as ProductImageGallery } from './ProductImageGallery';
 export { default as ProductHeader } from './ProductHeader';
 export { default as ProductPrice } from './ProductPrice';
@@ -11,8 +9,7 @@ export { default as ProductTrustBadges } from './ProductTrustBadges';
 export { default as ProductDescription } from './ProductDescription';
 export { default as ProductSpecs } from './ProductSpecs';
 export { default as ProductRelated } from './ProductRelated';
-export { default as ProductSkeleton } from './ProductSkeleton';
 
-// إلى:
-export { useProductState } from '../hooks/product-hooks';
-export { useProductActions } from '../hooks/product-hooks';
+// Hooks - من نفس المجلد
+export { useProductState } from './useProductState';
+export { useProductActions } from './useProductActions';
