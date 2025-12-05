@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { NextSeo, ProductJsonLd, BreadcrumbJsonLd } from 'next-seo';
+//import { NextSeo, ProductJsonLd, BreadcrumbJsonLd } from 'next-seo';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/layout/Layout';
