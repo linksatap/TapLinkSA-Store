@@ -43,7 +43,7 @@ export default function Header() {
     { href: '/services', label: 'الخدمات' },
     { href: '/shop', label: 'المتجر' },
 { href: '/subscriptions', label: 'الاشتراكات الرقمية' },
-    { href: '/coupons', label: ' 🎟️ العروض والكوبونات ' },
+    { href: '/coupons', label: ' العروض والكوبونات ' },
 
     { href: '/about', label: 'من نحن ' },
   ];
