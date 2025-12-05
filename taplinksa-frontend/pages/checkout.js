@@ -292,7 +292,8 @@ export default function Checkout() {
         </nav>
 
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">إتمام الطلب</h1>
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4">
+إتمام الطلب</h1>
           <div className="w-24 h-1 bg-gold mx-auto"></div>
         </div>
 
@@ -324,14 +325,14 @@ export default function Checkout() {
           </motion.div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-8">
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <div className="lg:col-span-2 space-y-6">
             
             <motion.form
               onSubmit={handleSubmit}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-white rounded-2xl shadow-lg p-8"
+className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
             >
               <h2 className="text-2xl font-bold mb-6">بيانات التوصيل</h2>
 
@@ -380,7 +381,7 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4">
+<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">المنطقة *</label>
                     <input
@@ -618,14 +619,14 @@ export default function Checkout() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-lg p-6 sticky top-24"
+className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24"
             >
               <h2 className="text-2xl font-bold mb-6">ملخص الطلب</h2>
 
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
                 {cart.map((item) => (
                   <div key={item.id} className="flex gap-3 pb-3 border-b">
-                    <div className="relative w-16 h-16 flex-shrink-0">
+<div className="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0">
                       <Image
                         src={item.images?.[0]?.src || '/placeholder-product.jpg'}
                         alt={item.name}
