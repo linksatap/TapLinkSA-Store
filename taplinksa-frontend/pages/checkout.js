@@ -9,9 +9,9 @@ import { useUser } from '../context/UserContext';
 import CouponInput from '../components/CouponInput';
 
 // المكونات المحسّنة
-import FormField from '../components/checkout/FormField';
-import PaymentMethodSelector from '../components/checkout/PaymentMethodSelector';
-import OrderSummary from '../components/checkout/OrderSummary';
+import FormField from '../components/FormField';
+import PaymentMethodSelector from '../components/PaymentMethodSelector';
+import OrderSummary from '../components/OrderSummary';
 
 // Custom Hooks
 import { useCheckoutForm } from '../hooks/useCheckoutForm';
