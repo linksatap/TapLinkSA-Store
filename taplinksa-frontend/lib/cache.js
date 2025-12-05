@@ -1,4 +1,3 @@
-import NodeCache from 'node-cache';
 
 // Cache لمدة 5 دقائق افتراضياً
 const cache = new NodeCache({ 
