@@ -79,7 +79,8 @@ export default function CouponInput({ onApplyCoupon, subtotal }) {
       <h3 className="text-lg font-bold text-dark mb-4">🎟️ كود الخصم</h3>
 
       {!appliedCoupon ? (
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+
           <input
             type="text"
             value={couponCode}
