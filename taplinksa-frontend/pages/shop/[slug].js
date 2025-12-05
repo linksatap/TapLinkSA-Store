@@ -260,7 +260,7 @@ export async function getServerSideProps({ params, req }) {
 
     const [productRes, relatedRes] = await Promise.all([
       fetch(`${baseUrl}/api/shop/${slug}`),
-      fetch(`${baseUrl}/api/products?per_page=4`).catch(() => ({
+      fetch(`${baseUrl}/api/shop?per_page=4`).catch(() => ({
         json: () => ({ products: [] }),
       })),
     ]);
