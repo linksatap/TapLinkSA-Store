@@ -1,4 +1,4 @@
-// pages/products/[slug].js
+// pages/shop/[slug].js - Fixed Version
 // Refactored to use component-based architecture
 
 import Head from 'next/head';
@@ -123,7 +123,7 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
               availability: isOutOfStock
                 ? 'https://schema.org/OutOfStock'
                 : 'https://schema.org/InStock',
-              url: `https://taplinksa.com/products/${product.slug}`,
+              url: `https://taplinksa.com/shop/${product.slug}`,
             },
             ...(product.average_rating && {
               aggregateRating: {
@@ -254,34 +254,53 @@ export async function getServerSideProps({ params, req }) {
   const { slug } = params;
 
   try {
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const host = req.headers['x-forwarded-host'] || req.headers.host || 'taplinksa.com';
-    const baseUrl = `${protocol}://${host}`;
+    // WooCommerce REST API configuration
+    const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL || 'https://your-woocommerce-site.com/wp-json/wc/v3';
+    const WC_CONSUMER_KEY = process.env.WC_CONSUMER_KEY;
+    const WC_CONSUMER_SECRET = process.env.WC_CONSUMER_SECRET;
 
+    // Build auth header for WooCommerce REST API
+    const auth = Buffer.from(`${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}`).toString('base64');
+
+    const headers = {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Fetch product by slug
     const [productRes, relatedRes] = await Promise.all([
-      fetch(`${baseUrl}/api/shop/${slug}`),
-      fetch(`${baseUrl}/api/shop?per_page=4`).catch(() => ({
-        json: () => ({ products: [] }),
-      })),
+      fetch(`${WC_API_URL}/products?slug=${slug}`, { headers }),
+      fetch(`${WC_API_URL}/products?per_page=4&orderby=popularity`, { headers }).catch(
+        () => ({
+          json: async () => [],
+        })
+      ),
     ]);
 
-    const product = await productRes.json();
-    const relatedData = await relatedRes.json();
+    const products = await productRes.json();
+    const relatedProducts = await relatedRes.json();
 
-    if (!product || product.error) {
+    // Get first product from array (WooCommerce returns array)
+    const product = Array.isArray(products) && products.length > 0 ? products[0] : null;
+
+    // If product not found, return error state
+    if (!product) {
+      console.warn(`Product not found with slug: ${slug}`);
       return {
         props: {
           product: { error: true },
           relatedProducts: [],
         },
+        revalidate: 60, // Revalidate after 60 seconds
       };
     }
 
     return {
       props: {
         product,
-        relatedProducts: relatedData.products || [],
+        relatedProducts: Array.isArray(relatedProducts) ? relatedProducts.slice(0, 4) : [],
       },
+      revalidate: 3600, // Revalidate every hour
     };
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -290,6 +309,7 @@ export async function getServerSideProps({ params, req }) {
         product: { error: true },
         relatedProducts: [],
       },
+      revalidate: 60,
     };
   }
 }
