@@ -12,43 +12,68 @@ import Pagination from '../../components/shop/Pagination';
 import ShopFeatures from '../../components/shop/ShopFeatures';
 
 // ============================================
-// API FUNCTIONS - Keep all existing logic
+// ENVIRONMENT VARIABLES
 // ============================================
 
 const WC_API_URL = process.env.NEXT_PUBLIC_WC_API;
 const WC_CONSUMER_KEY = process.env.NEXT_PUBLIC_WC_CONSUMER_KEY;
 const WC_CONSUMER_SECRET = process.env.NEXT_PUBLIC_WC_CONSUMER_SECRET;
+const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL;
+
+// ============================================
+// API UTILITY FUNCTIONS
+// ============================================
 
 /**
  * Create Basic Auth header for WooCommerce API
  */
 function getAuthHeader() {
   if (!WC_CONSUMER_KEY || !WC_CONSUMER_SECRET) {
-    console.warn('⚠️ WooCommerce API credentials not configured');
+    console.warn('⚠️  Missing WooCommerce credentials');
     return {};
   }
-  const credentials = btoa(`${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}`);
-  return {
-    Authorization: `Basic ${credentials}`,
-  };
+
+  try {
+    const credentials = Buffer.from(
+      `${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}`
+    ).toString('base64');
+    return {
+      Authorization: `Basic ${credentials}`,
+      'Content-Type': 'application/json',
+    };
+  } catch (error) {
+    console.error('Error creating auth header:', error);
+    return {};
+  }
 }
 
 /**
  * Fetch products from WooCommerce API
  */
-async function fetchProducts(page = 1, category = null, searchTerm = '', sortBy = 'latest') {
+async function fetchProducts(
+  page = 1,
+  category = null,
+  searchTerm = '',
+  sortBy = 'latest'
+) {
   try {
     if (!WC_API_URL) {
-      console.error('❌ NEXT_PUBLIC_WC_API not configured');
-      return { data: [], headers: {} };
+      console.error('❌ NEXT_PUBLIC_WC_API is not configured in environment variables');
+      return { data: [], total: 0, totalPages: 1 };
     }
 
     const params = new URLSearchParams();
     params.append('page', page);
-    params.append('per_page', 20); // Match pagination size
+    params.append('per_page', 20);
+    params.append('status', 'publish');
 
-    if (category) params.append('category', category);
-    if (searchTerm) params.append('search', searchTerm);
+    if (category) {
+      params.append('category', category);
+    }
+
+    if (searchTerm) {
+      params.append('search', searchTerm);
+    }
 
     // Handle sorting
     switch (sortBy) {
@@ -72,32 +97,34 @@ async function fetchProducts(page = 1, category = null, searchTerm = '', sortBy 
     }
 
     const url = `${WC_API_URL}/products?${params.toString()}`;
-    console.log(`📡 Fetching: ${url}`);
+    console.log(`📡 Fetching products: page=${page}, sort=${sortBy}`);
 
     const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeader(),
+      cache: 'no-store', // Disable caching for server-side
     });
 
     if (!response.ok) {
-      console.error(`❌ API Error: ${response.status} ${response.statusText}`);
-      return { data: [], headers: {} };
+      const errorText = await response.text();
+      console.error(`API Error ${response.status}:`, errorText);
+      return { data: [], total: 0, totalPages: 1 };
     }
 
-    const data = await response.json();
-    const total = response.headers.get('x-wp-total');
-    const totalPages = response.headers.get('x-wp-totalpages');
+    const products = await response.json();
+    const total = parseInt(response.headers.get('x-wp-total') || '0');
+    const totalPages = parseInt(response.headers.get('x-wp-totalpages') || '1');
+
+    console.log(`✅ Loaded ${products.length} products`);
 
     return {
-      data: data || [],
-      headers: {
-        'x-wp-total': total,
-        'x-wp-totalpages': totalPages,
-      },
+      data: products,
+      total,
+      totalPages,
     };
   } catch (error) {
-    console.error('❌ Error fetching products:', error.message);
-    return { data: [], headers: {} };
+    console.error('❌ fetchProducts error:', error.message);
+    return { data: [], total: 0, totalPages: 1 };
   }
 }
 
@@ -107,32 +134,36 @@ async function fetchProducts(page = 1, category = null, searchTerm = '', sortBy 
 async function fetchCategories() {
   try {
     if (!WC_API_URL) {
-      console.error('❌ NEXT_PUBLIC_WC_API not configured');
+      console.error('❌ NEXT_PUBLIC_WC_API is not configured');
       return [];
     }
 
     const url = `${WC_API_URL}/products/categories?per_page=100&hide_empty=true`;
-    console.log(`📡 Fetching categories: ${url}`);
+    console.log('📡 Fetching categories...');
 
     const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeader(),
+      cache: 'no-store',
     });
 
     if (!response.ok) {
-      console.error(`❌ Categories API Error: ${response.status}`);
+      console.error(`Categories API Error: ${response.status}`);
       return [];
     }
 
-    return await response.json();
+    const categories = await response.json();
+    console.log(`✅ Loaded ${categories.length} categories`);
+
+    return categories;
   } catch (error) {
-    console.error('❌ Error fetching categories:', error.message);
+    console.error('❌ fetchCategories error:', error.message);
     return [];
   }
 }
 
 // ============================================
-// SERVER-SIDE PROPS - FIXED!
+// SERVER-SIDE PROPS
 // ============================================
 
 export async function getServerSideProps({ query }) {
@@ -142,39 +173,28 @@ export async function getServerSideProps({ query }) {
     const search = query.search || '';
     const sort = query.sort || 'latest';
 
-    console.log('🔄 getServerSideProps - Fetching initial data...');
+    console.log('🔄 getServerSideProps starting...');
 
-    // Fetch data in parallel
-    const [productsResponse, categoriesResponse] = await Promise.all([
-      fetchProducts(page, category, search, sort),
-      fetchCategories(),
-    ]);
+    // Fetch data
+    const productsData = await fetchProducts(page, category, search, sort);
+    const categoriesData = await fetchCategories();
 
-    const products = productsResponse?.data || [];
-    const categories = categoriesResponse || [];
-    const totalCount = parseInt(productsResponse?.headers?.['x-wp-total'] || 0);
-    const totalPages = Math.ceil(totalCount / 20);
-
-    console.log(
-      `✅ Loaded: ${products.length} products, ${categories.length} categories, Page ${page} of ${totalPages}`
-    );
+    console.log(`✅ SSR complete: ${productsData.data.length} products loaded`);
 
     return {
       props: {
-        initialProducts: products,
-        initialCategories: categories,
+        initialProducts: productsData.data,
+        initialCategories: categoriesData,
         initialPage: page,
         initialCategory: category,
         initialSearch: search,
         initialSort: sort,
-        initialTotal: totalCount,
-        initialTotalPages: totalPages,
+        initialTotal: productsData.total,
+        initialTotalPages: productsData.totalPages,
       },
-      // ⚠️ REMOVED revalidate - getServerSideProps doesn't support ISR
-      // Use getStaticProps if you need ISR
     };
   } catch (error) {
-    console.error('❌ Error in getServerSideProps:', error);
+    console.error('❌ getServerSideProps error:', error);
 
     return {
       props: {
@@ -186,14 +206,15 @@ export async function getServerSideProps({ query }) {
         initialSort: 'latest',
         initialTotal: 0,
         initialTotalPages: 1,
+        error: 'Failed to load products',
       },
-      // Revalidate after 10 seconds on error
+      revalidate: 10,
     };
   }
 }
 
 // ============================================
-// SHOP PAGE COMPONENT
+// MAIN COMPONENT
 // ============================================
 
 export default function Shop({
@@ -205,10 +226,11 @@ export default function Shop({
   initialSort = 'latest',
   initialTotal = 0,
   initialTotalPages = 1,
+  error = null,
 }) {
   const router = useRouter();
 
-  // State management
+  // State
   const [products, setProducts] = useState(initialProducts);
   const [categories, setCategories] = useState(initialCategories);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -218,83 +240,81 @@ export default function Shop({
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [isLoading, setIsLoading] = useState(false);
   const [totalProducts, setTotalProducts] = useState(initialTotal);
+  const [hasError, setHasError] = useState(!!error);
 
   // Initialize AOS
   useEffect(() => {
-    AOS.init({
-      duration: 600,
-      easing: 'ease-in-out-quad',
-      delay: 0,
-      once: true,
-    });
+    if (typeof window !== 'undefined') {
+      AOS.init({
+        duration: 600,
+        easing: 'ease-in-out-quad',
+        once: true,
+      });
+    }
   }, []);
 
-  // Handle filter/sort changes
-  const handleFilterChange = useCallback(async () => {
+  // Apply filters
+  const applyFilters = useCallback(async () => {
     setIsLoading(true);
-    setCurrentPage(1);
+    setHasError(false);
 
     try {
-      const response = await fetchProducts(1, selectedCategory, searchTerm, sortBy);
-      const data = response.data || [];
-      const total = parseInt(response.headers?.['x-wp-total'] || 0);
-      const pages = Math.ceil(total / 20);
+      const data = await fetchProducts(1, selectedCategory, searchTerm, sortBy);
 
-      setProducts(data);
-      setTotalPages(pages);
-      setTotalProducts(total);
+      setProducts(data.data);
+      setTotalPages(data.totalPages);
+      setTotalProducts(data.total);
+      setCurrentPage(1);
 
-      // Update URL without reloading
-      const queryString = new URLSearchParams();
-      if (selectedCategory) queryString.set('category', selectedCategory);
-      if (searchTerm) queryString.set('search', searchTerm);
-      if (sortBy !== 'latest') queryString.set('sort', sortBy);
+      // Update URL
+      const params = new URLSearchParams();
+      if (selectedCategory) params.set('category', selectedCategory);
+      if (searchTerm) params.set('search', searchTerm);
+      if (sortBy !== 'latest') params.set('sort', sortBy);
 
       router.push(
         {
           pathname: '/shop',
-          query: Object.fromEntries(queryString) || {},
+          query: Object.fromEntries(params),
         },
         undefined,
         { shallow: true }
       );
-    } catch (error) {
-      console.error('Error applying filters:', error);
+    } catch (err) {
+      console.error('Error applying filters:', err);
+      setHasError(true);
     } finally {
       setIsLoading(false);
     }
   }, [selectedCategory, searchTerm, sortBy, router]);
 
-  // Handle pagination
+  // Handle page change
   const handlePageChange = useCallback(
     async (page) => {
       setIsLoading(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       try {
-        const response = await fetchProducts(page, selectedCategory, searchTerm, sortBy);
-        const data = response.data || [];
-
-        setProducts(data);
+        const data = await fetchProducts(page, selectedCategory, searchTerm, sortBy);
+        setProducts(data.data);
         setCurrentPage(page);
 
-        // Update URL
-        const queryString = new URLSearchParams();
-        queryString.set('page', page);
-        if (selectedCategory) queryString.set('category', selectedCategory);
-        if (searchTerm) queryString.set('search', searchTerm);
-        if (sortBy !== 'latest') queryString.set('sort', sortBy);
+        const params = new URLSearchParams();
+        params.set('page', page);
+        if (selectedCategory) params.set('category', selectedCategory);
+        if (searchTerm) params.set('search', searchTerm);
+        if (sortBy !== 'latest') params.set('sort', sortBy);
 
         router.push(
           {
             pathname: '/shop',
-            query: Object.fromEntries(queryString),
+            query: Object.fromEntries(params),
           },
           undefined,
           { shallow: true }
         );
-      } catch (error) {
-        console.error('Error changing page:', error);
+      } catch (err) {
+        console.error('Error changing page:', err);
       } finally {
         setIsLoading(false);
       }
@@ -302,27 +322,19 @@ export default function Shop({
     [selectedCategory, searchTerm, sortBy, router]
   );
 
-  // Trigger filter changes when dependencies change
+  // Trigger filter changes
   useEffect(() => {
-    if (currentPage !== 1) {
-      setCurrentPage(1);
+    if (currentPage === 1) {
+      applyFilters();
     } else {
-      handleFilterChange();
+      setCurrentPage(1);
     }
   }, [selectedCategory, searchTerm, sortBy]);
 
   // Handlers
-  const handleCategorySelect = (categorySlug) => {
-    setSelectedCategory(categorySlug);
-  };
-
-  const handleSearch = (term) => {
-    setSearchTerm(term);
-  };
-
-  const handleSort = (sort) => {
-    setSortBy(sort);
-  };
+  const handleCategorySelect = (cat) => setSelectedCategory(cat);
+  const handleSearch = (term) => setSearchTerm(term);
+  const handleSort = (sort) => setSortBy(sort);
 
   return (
     <>
@@ -330,17 +342,20 @@ export default function Shop({
         <title>متجرنا | أفضل المنتجات والعروض</title>
         <meta
           name="description"
-          content="تصفح مجموعتنا الواسعة من المنتجات عالية الجودة مع أفضل الأسعار والعروض الحصرية."
+          content="تصفح مجموعتنا الواسعة من المنتجات عالية الجودة"
         />
-        <meta name="robots" content="index, follow" />
       </Head>
 
       <div className="min-h-screen bg-gray-50">
+        {hasError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            ⚠️ حدث خطأ في تحميل المنتجات. يرجى التحقق من إعدادات الـ API.
+          </div>
+        )}
+
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
-          {/* Shop Header */}
           <ShopHeader />
 
-          {/* Filters Bar - Sticky on Mobile */}
           <ShopFiltersBar
             categories={categories}
             selectedCategory={selectedCategory}
@@ -352,12 +367,10 @@ export default function Shop({
             totalProducts={totalProducts}
           />
 
-          {/* Products Section */}
           <div className="mt-8 md:mt-12">
             <ProductsGrid products={products} isLoading={isLoading} />
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <Pagination
               currentPage={currentPage}
@@ -367,7 +380,6 @@ export default function Shop({
             />
           )}
 
-          {/* Trust Features - Bottom CTA */}
           <ShopFeatures />
         </div>
       </div>
