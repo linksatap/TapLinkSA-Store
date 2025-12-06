@@ -253,7 +253,21 @@ export default function Header() {
               ابدأ الآن
             </Link>
           </div>
- {/* Cart Icon */}
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className={`lg:hidden w-10 h-10 flex flex-col items-center justify-center gap-1.5 relative z-50 rounded-lg transition-all duration-300 ${
+              isOpen 
+                ? 'bg-gold' 
+                : scrolled || !isHomePage
+                ? 'hover:bg-gray-100'
+                : 'hover:bg-white/10'
+            }`}
+            aria-label="Toggle menu"
+          >
+
+             {/* Cart Icon */}
             <Link href="/cart" className="relative">
               <motion.div
                 whileHover={{ scale: 1.1 }}
@@ -290,18 +304,7 @@ export default function Header() {
                 )}
               </motion.div>
             </Link>
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className={`lg:hidden w-10 h-10 flex flex-col items-center justify-center gap-1.5 relative z-50 rounded-lg transition-all duration-300 ${
-              isOpen 
-                ? 'bg-gold' 
-                : scrolled || !isHomePage
-                ? 'hover:bg-gray-100'
-                : 'hover:bg-white/10'
-            }`}
-            aria-label="Toggle menu"
-          >
+            
             <motion.span
               animate={isOpen ? { rotate: 45, y: 8 } : { rotate: 0, y: 0 }}
               className={`w-6 h-0.5 transition-colors ${
