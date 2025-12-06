@@ -1,11 +1,10 @@
-// pages/shop/[slug].js - Final Version with All Fixes
+// pages/shop/[slug].js - Updated with Variations Support
 
 import Head from 'next/head';
 import Layout from '../../components/layout/Layout';
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
-// Import all product components
 import {
   ProductImageGallery,
   ProductHeader,
@@ -22,15 +21,13 @@ import {
   useProductActions,
 } from '../../components/product';
 
-// Import Reviews component
 import ProductReviews from '../../components/product/ProductReviews';
+import { fetchProductWithVariations, fetchRelatedProducts } from '../../lib/woocommerce';
 
-export default function ProductPage({ product: initialProduct, relatedProducts }) {
+export default function ProductPage({ product: initialProduct, variations: initialVariations = [], relatedProducts }) {
   const router = useRouter();
-  const [displayPrice, setDisplayPrice] = useState(initialProduct?.price);
-  const [displayRegularPrice, setDisplayRegularPrice] = useState(initialProduct?.regular_price);
+  const [selectedVariationId, setSelectedVariationId] = useState(null);
   
-  // Use custom hooks for state management
   const productState = useProductState(initialProduct);
   const productActions = useProductActions();
 
@@ -65,40 +62,73 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
     );
   }
 
-  // Compute derived values
   const product = initialProduct;
   const images = product.images || [];
-  const price = parseFloat(displayPrice);
-  const regularPrice = parseFloat(displayRegularPrice);
+
+  // Handle variations
+  const selectedVariation = useMemo(() => {
+    if (!selectedVariationId || !initialVariations.length) {
+      return null;
+    }
+    return initialVariations.find(v => v.id === selectedVariationId);
+  }, [selectedVariationId, initialVariations]);
+
+  // Get current product data (either variation or main product)
+  const currentProduct = selectedVariation || product;
+  const currentImages = selectedVariation?.image 
+    ? [{ src: selectedVariation.image.src }] 
+    : images;
+  
+  const price = parseFloat(selectedVariation?.price || product.price || 0);
+  const regularPrice = parseFloat(selectedVariation?.regular_price || product.regular_price || price);
+  
   const discountPercentage =
     regularPrice > price
       ? Math.round(((regularPrice - price) / regularPrice) * 100)
       : 0;
-  const isOnSale = product.on_sale && discountPercentage > 0;
-  const isOutOfStock = product.stock_status !== 'instock';
+  const isOnSale = currentProduct.on_sale && discountPercentage > 0;
+  const isOutOfStock = currentProduct.stock_status !== 'instock';
+
+  // Handle variant selection
+  const handleVariantSelect = (variationId) => {
+    setSelectedVariationId(variationId);
+    productState.setSelectedImage(0);
+  };
 
   // Handle cart operations
   const handleAddToCart = () => {
+    const itemData = {
+      ...product,
+      ...(selectedVariation && {
+        variation_id: selectedVariation.id,
+        attributes: selectedVariation.attributes,
+        price: selectedVariation.price,
+        image: selectedVariation.image,
+      }),
+    };
+    
     productActions.handleAddToCart(
-      { ...product, price: displayPrice },
+      itemData,
       productState.quantity,
       productState.selectedOptions
     );
   };
 
   const handleBuyNow = () => {
+    const itemData = {
+      ...product,
+      ...(selectedVariation && {
+        variation_id: selectedVariation.id,
+        attributes: selectedVariation.attributes,
+        price: selectedVariation.price,
+      }),
+    };
+    
     productActions.handleBuyNow(
-      { ...product, price: displayPrice },
+      itemData,
       productState.quantity,
       productState.selectedOptions
     );
-  };
-
-  const handleVariantPriceChange = (selectedOption) => {
-    // إذا كانت هناك منتجات مرتبطة بخيارات مختلفة بأسعار مختلفة
-    // هنا يمكن تحديث السعر بناءً على الخيار المختار
-    // مثال: لو كان هناك variant بسعر مختلف
-    // setDisplayPrice(newPrice);
   };
 
   return (
@@ -114,20 +144,19 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
           property="og:description"
           content={product.short_description?.replace(/<[^>]*>/g, '')}
         />
-        <meta property="og:image" content={images[0]?.src} />
+        <meta property="og:image" content={currentImages[0]?.src} />
         <meta property="og:type" content="product" />
         <meta property="product:price:amount" content={price} />
         <meta property="product:price:currency" content="SAR" />
 
-        {/* Product Schema */}
         <script type="application/ld+json">
           {JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Product',
             name: product.name,
-            image: images.map((img) => img.src),
+            image: currentImages.map((img) => img.src),
             description: product.short_description?.replace(/<[^>]*>/g, ''),
-            sku: product.sku,
+            sku: currentProduct.sku,
             offers: {
               '@type': 'Offer',
               price: price,
@@ -173,7 +202,7 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
             {/* LEFT: Image Gallery */}
             <ProductImageGallery
-              images={images}
+              images={currentImages}
               productName={product.name}
               isOnSale={isOnSale}
               discountPercentage={discountPercentage}
@@ -183,10 +212,8 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
 
             {/* RIGHT: Product Details */}
             <div className="space-y-4" data-aos="fade-left">
-              {/* Product Header */}
               <ProductHeader product={product} />
 
-              {/* Price Section */}
               <ProductPrice
                 price={price}
                 regularPrice={regularPrice}
@@ -195,7 +222,6 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
                 isOutOfStock={isOutOfStock}
               />
 
-              {/* Short Description */}
               {product.short_description && (
                 <div
                   className="prose prose-sm max-w-none text-gray-700 leading-relaxed"
@@ -205,23 +231,73 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
                 />
               )}
 
-              {/* Variants */}
+              {/* Variants Selection */}
+              {initialVariations.length > 0 && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <h3 className="font-bold text-dark mb-4">اختر النوع:</h3>
+                  <div className="space-y-3">
+                    {initialVariations.map((variation) => {
+                      const varPrice = parseFloat(variation.price || 0);
+                      const varRegularPrice = parseFloat(variation.regular_price || varPrice);
+                      const varDiscount =
+                        varRegularPrice > varPrice
+                          ? Math.round(((varRegularPrice - varPrice) / varRegularPrice) * 100)
+                          : 0;
+
+                      return (
+                        <button
+                          key={variation.id}
+                          onClick={() => handleVariantSelect(variation.id)}
+                          className={`w-full p-3 text-right border-2 rounded-lg transition-all ${
+                            selectedVariationId === variation.id
+                              ? 'border-gold bg-gold/10'
+                              : 'border-gray-200 hover:border-gold'
+                          } ${variation.stock_status !== 'instock' ? 'opacity-50' : ''}`}
+                          disabled={variation.stock_status !== 'instock'}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="text-right">
+                              <p className="font-bold text-dark">
+                                {variation.attributes
+                                  ?.map(attr => `${attr.option}`)
+                                  .join(' - ')}
+                              </p>
+                              <div className="flex gap-2 mt-1">
+                                <span className="text-gold font-bold">
+                                  {varPrice.toFixed(2)} ر.س
+                                </span>
+                                {varDiscount > 0 && (
+                                  <span className="text-sm text-gray-500 line-through">
+                                    {varRegularPrice.toFixed(2)} ر.س
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {variation.stock_status !== 'instock' && (
+                              <span className="text-red-500 text-sm">غير متوفر</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Regular Variants */}
               <ProductVariants
                 attributes={product.attributes}
                 selectedOptions={productState.selectedOptions}
                 isOutOfStock={isOutOfStock}
                 onOptionChange={productState.handleOptionChange}
-                onPriceChange={handleVariantPriceChange}
               />
 
-              {/* Quantity */}
               <ProductQuantity
                 quantity={productState.quantity}
                 onQuantityChange={productState.handleQuantityChange}
                 isOutOfStock={isOutOfStock}
               />
 
-              {/* CTA Buttons */}
               <ProductActions
                 isOutOfStock={isOutOfStock}
                 loading={productActions.loading}
@@ -230,7 +306,6 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
                 onBuyNow={handleBuyNow}
               />
 
-              {/* Trust Badges */}
               <ProductTrustBadges />
             </div>
           </div>
@@ -244,14 +319,6 @@ export default function ProductPage({ product: initialProduct, relatedProducts }
             >
               <ProductDescription description={product.description} />
               <ProductSpecs attributes={product.attributes} />
-
-              {!product.description &&
-                product.attributes.filter((attr) => !attr.variation).length ===
-                  0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>لا توجد مواصفات تقنية متاحة لهذا المنتج</p>
-                  </div>
-                )}
             </div>
           )}
 
@@ -277,12 +344,9 @@ export async function getServerSideProps({ params, req }) {
   const { slug } = params;
 
   try {
-    // WooCommerce REST API configuration
-    const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL || 'https://your-woocommerce-site.com/wp-json/wc/v3';
     const WC_CONSUMER_KEY = process.env.WC_CONSUMER_KEY;
     const WC_CONSUMER_SECRET = process.env.WC_CONSUMER_SECRET;
 
-    // Build auth header for WooCommerce REST API
     const auth = Buffer.from(`${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}`).toString('base64');
 
     const headers = {
@@ -290,46 +354,35 @@ export async function getServerSideProps({ params, req }) {
       'Content-Type': 'application/json',
     };
 
-    // Fetch product by slug
-    const productRes = await fetch(`${WC_API_URL}/products?slug=${encodeURIComponent(slug)}`, { headers });
-    const products = await productRes.json();
+    // Fetch product and variations
+    const { product, variations } = await fetchProductWithVariations(slug, headers);
 
-    // Get first product from array (WooCommerce returns array)
-    const product = Array.isArray(products) && products.length > 0 ? products[0] : null;
-
-    // If product not found, return error state
     if (!product) {
-      console.warn(`Product not found with slug: ${slug}`);
       return {
         props: {
           product: { error: true },
+          variations: [],
           relatedProducts: [],
         },
       };
     }
 
-    // Fetch related products (safely)
-    let relatedProducts = [];
-    try {
-      const relatedRes = await fetch(`${WC_API_URL}/products?per_page=4&orderby=popularity`, { headers });
-      relatedProducts = await relatedRes.json();
-      relatedProducts = Array.isArray(relatedProducts) ? relatedProducts.slice(0, 4) : [];
-    } catch (err) {
-      console.error('Error fetching related products:', err);
-      relatedProducts = [];
-    }
+    // Fetch related products
+    const relatedProducts = await fetchRelatedProducts(product.id, headers);
 
     return {
       props: {
         product,
-        relatedProducts: relatedProducts.filter(p => p.id !== product.id), // Remove current product
+        variations,
+        relatedProducts,
       },
     };
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error('Error in getServerSideProps:', error);
     return {
       props: {
         product: { error: true },
+        variations: [],
         relatedProducts: [],
       },
     };
