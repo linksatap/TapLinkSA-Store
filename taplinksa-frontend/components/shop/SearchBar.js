@@ -33,7 +33,7 @@ export default function SearchBar({ searchTerm, onSearchChange, onSearchSubmit, 
             onChange={handleInputChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder="ابحث عن Canva Pro و Netflix والخدمات الرقمية الأخرى..."
+            placeholder="ابحث عن."
             className={`w-full px-6 py-4 pr-16 rounded-xl border-2 transition-all duration-300 text-lg ${
               isFocused
                 ? 'border-gold shadow-lg shadow-gold/30'
