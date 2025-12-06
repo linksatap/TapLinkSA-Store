@@ -1,9 +1,13 @@
-// components/product/ProductReviews.js
+// components/product/ProductReviews.js - Updated with API Integration
 
 import { useState } from 'react';
 
-export default function ProductReviews({ productId, reviews = [], onAddReview }) {
+export default function ProductReviews({ productId, reviews: initialReviews = [], onReviewAdded }) {
+  const [reviews, setReviews] = useState(initialReviews);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  
   const [formData, setFormData] = useState({
     rating: 5,
     title: '',
@@ -16,27 +20,74 @@ export default function ProductReviews({ productId, reviews = [], onAddReview })
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'rating' ? parseInt(value) : value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (onAddReview) {
-      await onAddReview(formData);
+    setLoading(true);
+    setMessage('');
+
+    try {
+      // Send to API endpoint
+      const res = await fetch('/api/reviews/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId,
+          ...formData,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'خطأ في إضافة التقييم');
+      }
+
+      // Add new review to list
+      const newReview = {
+        ...formData,
+        date: new Date().toLocaleDateString('ar-SA'),
+      };
+      
+      setReviews(prev => [newReview, ...prev]);
       setFormData({ rating: 5, title: '', comment: '', name: '', email: '' });
       setShowForm(false);
+      setMessage('✅ تم إضافة التقييم بنجاح!');
+      
+      if (onReviewAdded) {
+        onReviewAdded(newReview);
+      }
+
+      // Clear message after 3 seconds
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      console.error('Error adding review:', error);
+      setMessage(`❌ ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const averageRating = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
     : 0;
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-5 md:p-8">
+    <div className="bg-white rounded-2xl shadow-lg p-5 md:p-8 mb-12">
       {/* Header */}
       <h2 className="text-2xl md:text-3xl font-bold mb-8 text-dark">التقييمات والآراء</h2>
+
+      {/* Message */}
+      {message && (
+        <div className={`p-4 rounded-lg mb-6 ${message.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {message}
+        </div>
+      )}
 
       {/* Summary */}
       <div className="grid md:grid-cols-2 gap-8 mb-12 pb-12 border-b">
@@ -77,7 +128,8 @@ export default function ProductReviews({ productId, reviews = [], onAddReview })
         <div className="flex flex-col justify-center">
           <button
             onClick={() => setShowForm(!showForm)}
-            className="btn-primary py-3 px-6 text-lg font-bold"
+            disabled={loading}
+            className="btn-primary py-3 px-6 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {showForm ? 'إلغاء' : 'اكتب تقييماً'}
           </button>
@@ -95,7 +147,8 @@ export default function ProductReviews({ productId, reviews = [], onAddReview })
               required
               value={formData.name}
               onChange={handleInputChange}
-              className="form-control"
+              disabled={loading}
+              className="form-control disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <input
               type="email"
@@ -104,7 +157,8 @@ export default function ProductReviews({ productId, reviews = [], onAddReview })
               required
               value={formData.email}
               onChange={handleInputChange}
-              className="form-control"
+              disabled={loading}
+              className="form-control disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -115,7 +169,8 @@ export default function ProductReviews({ productId, reviews = [], onAddReview })
             required
             value={formData.title}
             onChange={handleInputChange}
-            className="form-control"
+            disabled={loading}
+            className="form-control disabled:opacity-50 disabled:cursor-not-allowed"
           />
 
           <div>
@@ -126,7 +181,8 @@ export default function ProductReviews({ productId, reviews = [], onAddReview })
                   key={rating}
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, rating }))}
-                  className={`text-3xl transition-colors ${
+                  disabled={loading}
+                  className={`text-3xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     rating <= formData.rating ? 'text-gold' : 'text-gray-300'
                   }`}
                 >
@@ -143,11 +199,16 @@ export default function ProductReviews({ productId, reviews = [], onAddReview })
             rows="5"
             value={formData.comment}
             onChange={handleInputChange}
-            className="form-control"
+            disabled={loading}
+            className="form-control disabled:opacity-50 disabled:cursor-not-allowed"
           />
 
-          <button type="submit" className="btn-primary w-full py-3">
-            إرسال التقييم
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'جاري الإرسال...' : 'إرسال التقييم'}
           </button>
         </form>
       )}

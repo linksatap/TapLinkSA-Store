@@ -1,4 +1,4 @@
-// lib/woocommerce.js - Updated with URL Decoding
+// lib/woocommerce.js - Updated with Reviews Support
 
 export async function fetchProductWithVariations(slug, headers) {
   const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL || 'https://your-woocommerce-site.com/wp-json/wc/v3';
@@ -29,7 +29,20 @@ export async function fetchProductWithVariations(slug, headers) {
       }
     }
 
-    return { product, variations };
+    // 3. Fetch reviews for the product
+    let reviews = [];
+    try {
+      const reviewsRes = await fetch(
+        `${WC_API_URL}/products/${product.id}/reviews?per_page=100`,
+        { headers }
+      );
+      reviews = await reviewsRes.json();
+      reviews = Array.isArray(reviews) ? reviews.map(decodeReview) : [];
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+    }
+
+    return { product: { ...product, reviews }, variations };
   } catch (error) {
     console.error('Error fetching product with variations:', error);
     return { product: null, variations: [] };
@@ -65,6 +78,15 @@ function decodeVariation(variation) {
   };
 }
 
+// Helper function to decode review
+function decodeReview(review) {
+  return {
+    ...review,
+    reviewer: decodeURIComponent(review.reviewer || ''),
+    review: decodeURIComponent(review.review || ''),
+  };
+}
+
 // Helper function to decode text
 export function decodeText(text) {
   if (!text) return '';
@@ -72,5 +94,43 @@ export function decodeText(text) {
     return decodeURIComponent(text);
   } catch (err) {
     return text;
+  }
+}
+
+// Add review to product
+export async function addProductReview(productId, reviewData, headers) {
+  const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL;
+
+  try {
+    const payload = {
+      product_id: productId,
+      reviewer: reviewData.name,
+      reviewer_email: reviewData.email,
+      review: reviewData.comment,
+      rating: parseInt(reviewData.rating),
+      review_title: reviewData.title,
+    };
+
+    const res = await fetch(
+      `${WC_API_URL}/products/${productId}/reviews`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to add review: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    return { success: true, review: data };
+  } catch (error) {
+    console.error('Error adding review:', error);
+    return { success: false, error: error.message };
   }
 }
