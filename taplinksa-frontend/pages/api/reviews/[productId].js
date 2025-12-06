@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/shop/${productId}/reviews`,
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/Products/${productId}/reviews`,
         {
           params: {
             per_page: 100,
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
       console.log('📊 Review data:', { rating, reviewer, reviewer_email });
 
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/shop/${productId}/reviews`,
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/Products/${productId}/reviews`,
         {
           product_id: parseInt(productId),
           review: review.trim(),
