@@ -12,115 +12,37 @@ import Pagination from '../../components/shop/Pagination';
 import ShopFeatures from '../../components/shop/ShopFeatures';
 
 // ============================================
-// ENVIRONMENT VARIABLES
-// ============================================
-
-const WC_API_URL = process.env.NEXT_PUBLIC_WC_API;
-const WC_CONSUMER_KEY = process.env.NEXT_PUBLIC_WC_CONSUMER_KEY;
-const WC_CONSUMER_SECRET = process.env.NEXT_PUBLIC_WC_CONSUMER_SECRET;
-const WORDPRESS_URL = process.env.NEXT_PUBLIC_WORDPRESS_URL;
-
-// ============================================
-// API UTILITY FUNCTIONS
+// API FUNCTIONS - Now call OUR routes
 // ============================================
 
 /**
- * Create Basic Auth header for WooCommerce API
+ * Fetch products from our API route (not WC directly)
  */
-function getAuthHeader() {
-  if (!WC_CONSUMER_KEY || !WC_CONSUMER_SECRET) {
-    console.warn('⚠️  Missing WooCommerce credentials');
-    return {};
-  }
-
+async function fetchProducts(page = 1, category = null, searchTerm = '', sortBy = 'latest') {
   try {
-    const credentials = Buffer.from(
-      `${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}`
-    ).toString('base64');
-    return {
-      Authorization: `Basic ${credentials}`,
-      'Content-Type': 'application/json',
-    };
-  } catch (error) {
-    console.error('Error creating auth header:', error);
-    return {};
-  }
-}
-
-/**
- * Fetch products from WooCommerce API
- */
-async function fetchProducts(
-  page = 1,
-  category = null,
-  searchTerm = '',
-  sortBy = 'latest'
-) {
-  try {
-    if (!WC_API_URL) {
-      console.error('❌ NEXT_PUBLIC_WC_API is not configured in environment variables');
-      return { data: [], total: 0, totalPages: 1 };
-    }
-
     const params = new URLSearchParams();
     params.append('page', page);
-    params.append('per_page', 20);
-    params.append('status', 'publish');
+    if (category) params.append('category', category);
+    if (searchTerm) params.append('search', searchTerm);
+    params.append('sortBy', sortBy);
 
-    if (category) {
-      params.append('category', category);
-    }
+    const url = `/api/shop/products?${params.toString()}`;
+    console.log(`📡 Fetching from: ${url}`);
 
-    if (searchTerm) {
-      params.append('search', searchTerm);
-    }
-
-    // Handle sorting
-    switch (sortBy) {
-      case 'popular':
-        params.append('orderby', 'popularity');
-        break;
-      case 'price_asc':
-        params.append('orderby', 'price');
-        params.append('order', 'asc');
-        break;
-      case 'price_desc':
-        params.append('orderby', 'price');
-        params.append('order', 'desc');
-        break;
-      case 'rating':
-        params.append('orderby', 'rating');
-        break;
-      default:
-        params.append('orderby', 'date');
-        params.append('order', 'desc');
-    }
-
-    const url = `${WC_API_URL}/products?${params.toString()}`;
-    console.log(`📡 Fetching products: page=${page}, sort=${sortBy}`);
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: getAuthHeader(),
-      cache: 'no-store', // Disable caching for server-side
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`API Error ${response.status}:`, errorText);
+      console.error(`❌ API Error: ${response.status}`);
       return { data: [], total: 0, totalPages: 1 };
     }
 
-    const products = await response.json();
-    const total = parseInt(response.headers.get('x-wp-total') || '0');
-    const totalPages = parseInt(response.headers.get('x-wp-totalpages') || '1');
-
-    console.log(`✅ Loaded ${products.length} products`);
+    const result = await response.json();
+    console.log(`✅ Got ${result.data?.length || 0} products`);
 
     return {
-      data: products,
-      total,
-      totalPages,
+      data: result.data || [],
+      total: result.total || 0,
+      totalPages: result.totalPages || 1,
     };
   } catch (error) {
     console.error('❌ fetchProducts error:', error.message);
@@ -129,33 +51,21 @@ async function fetchProducts(
 }
 
 /**
- * Fetch product categories
+ * Fetch categories from our API route
  */
 async function fetchCategories() {
   try {
-    if (!WC_API_URL) {
-      console.error('❌ NEXT_PUBLIC_WC_API is not configured');
-      return [];
-    }
-
-    const url = `${WC_API_URL}/products/categories?per_page=100&hide_empty=true`;
-    console.log('📡 Fetching categories...');
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: getAuthHeader(),
-      cache: 'no-store',
-    });
+    const response = await fetch('/api/shop/categories');
 
     if (!response.ok) {
-      console.error(`Categories API Error: ${response.status}`);
+      console.error(`❌ Categories API Error: ${response.status}`);
       return [];
     }
 
-    const categories = await response.json();
-    console.log(`✅ Loaded ${categories.length} categories`);
+    const result = await response.json();
+    console.log(`✅ Loaded ${result.data?.length || 0} categories`);
 
-    return categories;
+    return result.data || [];
   } catch (error) {
     console.error('❌ fetchCategories error:', error.message);
     return [];
@@ -173,24 +83,45 @@ export async function getServerSideProps({ query }) {
     const search = query.search || '';
     const sort = query.sort || 'latest';
 
-    console.log('🔄 getServerSideProps starting...');
+    console.log('🔄 getServerSideProps - Fetching initial data...');
 
-    // Fetch data
-    const productsData = await fetchProducts(page, category, search, sort);
-    const categoriesData = await fetchCategories();
+    // Fetch from API routes
+    const [productsResponse, categoriesResponse] = await Promise.all([
+      fetch(
+        `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/shop/products?page=${page}&category=${category || ''}&search=${search}&sortBy=${sort}`
+      ),
+      fetch(
+        `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/shop/categories`
+      ),
+    ]);
 
-    console.log(`✅ SSR complete: ${productsData.data.length} products loaded`);
+    let products = [];
+    let categories = [];
+    let total = 0;
+    let totalPages = 1;
+
+    if (productsResponse.ok) {
+      const productsData = await productsResponse.json();
+      products = productsData.data || [];
+      total = productsData.total || 0;
+      totalPages = productsData.totalPages || 1;
+    }
+
+    if (categoriesResponse.ok) {
+      const categoriesData = await categoriesResponse.json();
+      categories = categoriesData.data || [];
+    }
 
     return {
       props: {
-        initialProducts: productsData.data,
-        initialCategories: categoriesData,
+        initialProducts: products,
+        initialCategories: categories,
         initialPage: page,
         initialCategory: category,
         initialSearch: search,
         initialSort: sort,
-        initialTotal: productsData.total,
-        initialTotalPages: productsData.totalPages,
+        initialTotal: total,
+        initialTotalPages: totalPages,
       },
     };
   } catch (error) {
@@ -206,9 +137,7 @@ export async function getServerSideProps({ query }) {
         initialSort: 'latest',
         initialTotal: 0,
         initialTotalPages: 1,
-        error: 'Failed to load products',
       },
-      revalidate: 10,
     };
   }
 }
@@ -226,7 +155,6 @@ export default function Shop({
   initialSort = 'latest',
   initialTotal = 0,
   initialTotalPages = 1,
-  error = null,
 }) {
   const router = useRouter();
 
@@ -240,7 +168,7 @@ export default function Shop({
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [isLoading, setIsLoading] = useState(false);
   const [totalProducts, setTotalProducts] = useState(initialTotal);
-  const [hasError, setHasError] = useState(!!error);
+  const [hasError, setHasError] = useState(false);
 
   // Initialize AOS
   useEffect(() => {
@@ -348,8 +276,8 @@ export default function Shop({
 
       <div className="min-h-screen bg-gray-50">
         {hasError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            ⚠️ حدث خطأ في تحميل المنتجات. يرجى التحقق من إعدادات الـ API.
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded m-4">
+            ⚠️ حدث خطأ في تحميل المنتجات. يرجى المحاولة لاحقاً.
           </div>
         )}
 
