@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/shop/${productId}/reviews`,
         {
           params: {
             per_page: 100,
