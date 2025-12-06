@@ -87,7 +87,7 @@ export default function Header() {
                 scrolled || !isHomePage ? 'text-dark' : 'text-white'
               }`}
             >
-              <span className="text-gold">منجر</span>
+              <span className="text-gold">متجر</span>
               <span> لينكتاب</span>
               <span className="text-gold">SA</span>
             </motion.span>
