@@ -1,6 +1,4 @@
-// pages/api/reviews/[productId].js
-
-import axios from 'axios';
+// pages/api/reviews/[productId].js - FIXED VERSION
 
 export default async function handler(req, res) {
   const { productId } = req.query;
@@ -14,24 +12,41 @@ export default async function handler(req, res) {
     try {
       console.log('📥 Fetching reviews for product:', productId);
       
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
+      const auth = Buffer.from(
+        `${process.env.WC_CONSUMER_KEY}:${process.env.WC_CONSUMER_SECRET}`
+      ).toString('base64');
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews?per_page=100`,
         {
-          params: {
-            per_page: 100,
-          },
-          auth: {
-            username: process.env.WC_CONSUMER_KEY,
-            password: process.env.WC_CONSUMER_SECRET,
+          method: 'GET',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json',
           },
         }
       );
 
-      console.log('✅ Reviews fetched successfully:', response.data.length);
-      res.status(200).json(response.data);
+      if (!response.ok) {
+        console.error('❌ API Error:', response.status, response.statusText);
+        const errorData = await response.text();
+        console.error('Error details:', errorData);
+        return res.status(response.status).json({ 
+          error: 'Failed to fetch reviews from WooCommerce',
+          details: errorData
+        });
+      }
+
+      const data = await response.json();
+      console.log('✅ Reviews fetched successfully:', Array.isArray(data) ? data.length : 0);
+      
+      res.status(200).json(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('❌ Error fetching reviews:', error.response?.status, error.response?.data || error.message);
-      res.status(500).json({ error: 'Failed to fetch reviews' });
+      console.error('❌ Error fetching reviews:', error.message);
+      res.status(500).json({ 
+        error: 'Failed to fetch reviews',
+        details: error.message 
+      });
     }
   }
 
@@ -64,77 +79,58 @@ export default async function handler(req, res) {
       }
 
       console.log('📝 Adding review for product:', productId);
-      console.log('📊 Review data:', { rating, reviewer, reviewer_email });
 
-      // محاولة endpoint الأول
-      try {
-        const response = await axios.post(
-          `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
-          {
-            product_id: parseInt(productId),
-            review: review.trim(),
-            reviewer: reviewer.trim(),
-            reviewer_email: reviewer_email.trim(),
-            rating: parseInt(rating),
+      const auth = Buffer.from(
+        `${process.env.WC_CONSUMER_KEY}:${process.env.WC_CONSUMER_SECRET}`
+      ).toString('base64');
+
+      const payload = {
+        product_id: parseInt(productId),
+        review: review.trim(),
+        reviewer: reviewer.trim(),
+        reviewer_email: reviewer_email.trim(),
+        rating: parseInt(rating),
+      };
+
+      console.log('📊 Payload:', payload);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json',
           },
-          {
-            auth: {
-              username: process.env.WC_CONSUMER_KEY,
-              password: process.env.WC_CONSUMER_SECRET,
-            },
-          }
-        );
-
-        console.log('✅ Review added successfully:', response.data.id);
-        res.status(201).json({
-          success: true,
-          review: response.data,
-        });
-      } catch (error) {
-        // إذا فشل، جرب endpoint بديل
-        if (error.response?.status === 404) {
-          console.log('📍 Trying alternative endpoint...');
-          
-          const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_WC_API_URL}/products/reviews`,
-            {
-              product_id: parseInt(productId),
-              review: review.trim(),
-              reviewer: reviewer.trim(),
-              reviewer_email: reviewer_email.trim(),
-              rating: parseInt(rating),
-            },
-            {
-              auth: {
-                username: process.env.WC_CONSUMER_KEY,
-                password: process.env.WC_CONSUMER_SECRET,
-              },
-            }
-          );
-
-          console.log('✅ Review added successfully (alternative):', response.data.id);
-          res.status(201).json({
-            success: true,
-            review: response.data,
-          });
-        } else {
-          throw error;
+          body: JSON.stringify(payload),
         }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ API Error:', response.status, data);
+        
+        if (response.status === 401 || response.status === 403) {
+          return res.status(403).json({ error: 'ليس لديك صلاحية لإضافة تقييم' });
+        }
+
+        return res.status(response.status).json({
+          error: data.message || 'فشل إضافة التقييم',
+          details: data,
+        });
       }
+
+      console.log('✅ Review added successfully:', data.id);
+      res.status(201).json({
+        success: true,
+        review: data,
+      });
     } catch (error) {
-      console.error('❌ Error creating review:', error.response?.status, error.response?.data || error.message);
-
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        return res.status(403).json({ error: 'ليس لديك صلاحية لإضافة تقييم' });
-      }
-
-      if (error.response?.data?.code === 'woocommerce_rest_comment_exists') {
-        return res.status(400).json({ error: 'لقد قمت بتقييم هذا المنتج من قبل' });
-      }
-
+      console.error('❌ Error creating review:', error.message);
       res.status(500).json({
         error: 'فشل إضافة التقييم',
-        details: error.response?.data?.message || error.message,
+        details: error.message,
       });
     }
   } else {
