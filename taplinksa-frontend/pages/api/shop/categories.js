@@ -1,6 +1,15 @@
 // pages/api/shop/categories.js
 
 export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   try {
     const WC_API_URL = process.env.NEXT_PUBLIC_WC_API;
     const WC_CONSUMER_KEY = process.env.NEXT_PUBLIC_WC_CONSUMER_KEY;
@@ -25,13 +34,18 @@ export default async function handler(req, res) {
       headers: {
         Authorization: `Basic ${credentials}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'TapLink-Frontend/1.0',
       },
+      timeout: 10000,
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
       console.error(`❌ Categories API Error: ${response.status}`);
+      console.error(errorText);
+
       return res.status(response.status).json({
-        error: `Error fetching categories: ${response.status}`,
+        error: `Categories API error: ${response.status}`,
         data: [],
       });
     }
@@ -43,9 +57,11 @@ export default async function handler(req, res) {
       data: categories,
     });
   } catch (error) {
-    console.error('❌ Categories API error:', error.message);
+    console.error('❌ Categories API Error:', error);
+    console.error('Stack:', error.stack);
+
     return res.status(500).json({
-      error: error.message,
+      error: error.message || 'Internal Server Error',
       data: [],
     });
   }
