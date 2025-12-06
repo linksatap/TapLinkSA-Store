@@ -1,4 +1,4 @@
-// pages/api/reviews/[productId].js - FIXED VERSION
+// pages/api/reviews/[productId].js - QUERY PARAMS VERSION
 
 export default async function handler(req, res) {
   const { productId } = req.query;
@@ -7,33 +7,50 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Product ID is required' });
   }
 
+  const consumerKey = process.env.WC_CONSUMER_KEY;
+  const consumerSecret = process.env.WC_CONSUMER_SECRET;
+  const apiUrl = process.env.NEXT_PUBLIC_WC_API_URL;
+
+  if (!consumerKey || !consumerSecret || !apiUrl) {
+    console.error('❌ Missing environment variables');
+    return res.status(500).json({ 
+      error: 'Server configuration error',
+      missing: {
+        key: !consumerKey,
+        secret: !consumerSecret,
+        url: !apiUrl
+      }
+    });
+  }
+
   // GET - جلب التقييمات
   if (req.method === 'GET') {
     try {
       console.log('📥 Fetching reviews for product:', productId);
+      console.log('🔗 API URL:', apiUrl);
       
-      const auth = Buffer.from(
-        `${process.env.WC_CONSUMER_KEY}:${process.env.WC_CONSUMER_SECRET}`
-      ).toString('base64');
+      const url = `${apiUrl}/products/${productId}/reviews?per_page=100&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+      
+      console.log('📍 Requesting:', url.replace(consumerKey, 'KEY').replace(consumerSecret, 'SECRET'));
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews?per_page=100`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📊 Response Status:', response.status);
 
       if (!response.ok) {
+        const errorText = await response.text();
         console.error('❌ API Error:', response.status, response.statusText);
-        const errorData = await response.text();
-        console.error('Error details:', errorData);
+        console.error('❌ Response Body:', errorText);
+        
         return res.status(response.status).json({ 
-          error: 'Failed to fetch reviews from WooCommerce',
-          details: errorData
+          error: `WooCommerce API Error: ${response.statusText}`,
+          status: response.status,
+          details: errorText
         });
       }
 
@@ -80,10 +97,6 @@ export default async function handler(req, res) {
 
       console.log('📝 Adding review for product:', productId);
 
-      const auth = Buffer.from(
-        `${process.env.WC_CONSUMER_KEY}:${process.env.WC_CONSUMER_SECRET}`
-      ).toString('base64');
-
       const payload = {
         product_id: parseInt(productId),
         review: review.trim(),
@@ -94,29 +107,31 @@ export default async function handler(req, res) {
 
       console.log('📊 Payload:', payload);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const url = `${apiUrl}/products/${productId}/reviews?consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
       const data = await response.json();
+
+      console.log('📊 Response Status:', response.status);
+      console.log('📊 Response Data:', data);
 
       if (!response.ok) {
         console.error('❌ API Error:', response.status, data);
         
         if (response.status === 401 || response.status === 403) {
-          return res.status(403).json({ error: 'ليس لديك صلاحية لإضافة تقييم' });
+          return res.status(403).json({ error: 'ليس لديك صلاحية لإضافة تقييم - تحقق من المفاتيح' });
         }
 
         return res.status(response.status).json({
           error: data.message || 'فشل إضافة التقييم',
+          code: data.code,
           details: data,
         });
       }
