@@ -174,6 +174,9 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
   );
 }
 
+// ✅ CORRECTED: getServerSideProps for dynamic pages
+// Do NOT use revalidate - that's only for getStaticProps
+// All props must be inside the props object
 export async function getServerSideProps() {
   try {
     const { products: initialProducts, total: initialTotal, totalPages: initialTotalPages } = await getProducts(
@@ -192,7 +195,6 @@ export async function getServerSideProps() {
         initialTotalPages,
         categories,
       },
-      revalidate: 60,
     };
   } catch (error) {
     console.error('Error in SSR:', error.message);
