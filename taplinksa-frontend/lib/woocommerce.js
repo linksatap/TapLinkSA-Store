@@ -1,7 +1,7 @@
 // lib/woocommerce.js - Updated with Reviews Support
 
 export async function fetchProductWithVariations(slug, headers) {
-  const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL || 'https://your-woocommerce-site.com/wp-json/wc/v3';
+  const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL || 'https://cms-taplinksa.com/wp-json/wc/v3';
 
   try {
     // 1. Fetch main product
