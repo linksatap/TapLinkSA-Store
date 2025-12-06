@@ -1,4 +1,4 @@
-// pages/api/reviews/[productId].js - Working Version
+// pages/api/reviews/[productId].js
 
 import axios from 'axios';
 
@@ -12,8 +12,10 @@ export default async function handler(req, res) {
   // GET - جلب التقييمات
   if (req.method === 'GET') {
     try {
+      console.log('📥 Fetching reviews for product:', productId);
+      
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/Products/${productId}/reviews`,
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
         {
           params: {
             per_page: 100,
@@ -25,9 +27,10 @@ export default async function handler(req, res) {
         }
       );
 
+      console.log('✅ Reviews fetched successfully:', response.data.length);
       res.status(200).json(response.data);
     } catch (error) {
-      console.error('Error fetching reviews:', error.response?.data || error.message);
+      console.error('❌ Error fetching reviews:', error.response?.status, error.response?.data || error.message);
       res.status(500).json({ error: 'Failed to fetch reviews' });
     }
   }
@@ -63,43 +66,70 @@ export default async function handler(req, res) {
       console.log('📝 Adding review for product:', productId);
       console.log('📊 Review data:', { rating, reviewer, reviewer_email });
 
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/Products/${productId}/reviews`,
-        {
-          product_id: parseInt(productId),
-          review: review.trim(),
-          reviewer: reviewer.trim(),
-          reviewer_email: reviewer_email.trim(),
-          rating: parseInt(rating),
-        },
-        {
-          auth: {
-            username: process.env.WC_CONSUMER_KEY,
-            password: process.env.WC_CONSUMER_SECRET,
+      // محاولة endpoint الأول
+      try {
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
+          {
+            product_id: parseInt(productId),
+            review: review.trim(),
+            reviewer: reviewer.trim(),
+            reviewer_email: reviewer_email.trim(),
+            rating: parseInt(rating),
           },
+          {
+            auth: {
+              username: process.env.WC_CONSUMER_KEY,
+              password: process.env.WC_CONSUMER_SECRET,
+            },
+          }
+        );
+
+        console.log('✅ Review added successfully:', response.data.id);
+        res.status(201).json({
+          success: true,
+          review: response.data,
+        });
+      } catch (error) {
+        // إذا فشل، جرب endpoint بديل
+        if (error.response?.status === 404) {
+          console.log('📍 Trying alternative endpoint...');
+          
+          const response = await axios.post(
+            `${process.env.NEXT_PUBLIC_WC_API_URL}/products/reviews`,
+            {
+              product_id: parseInt(productId),
+              review: review.trim(),
+              reviewer: reviewer.trim(),
+              reviewer_email: reviewer_email.trim(),
+              rating: parseInt(rating),
+            },
+            {
+              auth: {
+                username: process.env.WC_CONSUMER_KEY,
+                password: process.env.WC_CONSUMER_SECRET,
+              },
+            }
+          );
+
+          console.log('✅ Review added successfully (alternative):', response.data.id);
+          res.status(201).json({
+            success: true,
+            review: response.data,
+          });
+        } else {
+          throw error;
         }
-      );
-
-      console.log('✅ Review added successfully:', response.data.id);
-
-      res.status(201).json({
-        success: true,
-        review: response.data,
-      });
+      }
     } catch (error) {
-      console.error('Error creating review:', error.response?.status, error.response?.data || error.message);
+      console.error('❌ Error creating review:', error.response?.status, error.response?.data || error.message);
 
-      // معالجة الأخطاء المختلفة
-      if (error.response?.status === 404) {
-        return res.status(404).json({ error: 'المنتج غير موجود' });
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return res.status(403).json({ error: 'ليس لديك صلاحية لإضافة تقييم' });
       }
 
       if (error.response?.data?.code === 'woocommerce_rest_comment_exists') {
         return res.status(400).json({ error: 'لقد قمت بتقييم هذا المنتج من قبل' });
-      }
-
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        return res.status(403).json({ error: 'ليس لديك صلاحية لإضافة تقييم' });
       }
 
       res.status(500).json({

@@ -1,12 +1,13 @@
-// components/product/ProductReviews.js - Updated to work with new API
+// components/product/ProductReviews.js - Complete Fix
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function ProductReviews({ productId, reviews: initialReviews = [], onReviewAdded }) {
+export default function ProductReviews({ productId, reviews: initialReviews = [] }) {
   const [reviews, setReviews] = useState(initialReviews);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [fetching, setFetching] = useState(false);
 
   const [formData, setFormData] = useState({
     rating: 5,
@@ -14,6 +15,29 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
     reviewer: '',
     reviewer_email: '',
   });
+
+  // Fetch reviews on mount
+  useEffect(() => {
+    fetchReviews();
+  }, [productId]);
+
+  const fetchReviews = async () => {
+    if (!productId) return;
+    
+    setFetching(true);
+    try {
+      const res = await fetch(`/api/reviews/${productId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(Array.isArray(data) ? data : []);
+        console.log('✅ Reviews loaded:', data.length);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -40,10 +64,7 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
         throw new Error('التقييم يجب أن يكون 10 أحرف على الأقل');
       }
 
-      console.log('📤 Sending review to API:', {
-        productId,
-        ...formData,
-      });
+      console.log('📤 Sending review to API for product:', productId);
 
       const res = await fetch(`/api/reviews/${productId}`, {
         method: 'POST',
@@ -61,15 +82,9 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
 
       console.log('✅ Review added successfully');
 
-      // Add new review to list
-      const newReview = {
-        ...formData,
-        id: data.review?.id || Date.now(),
-        date: new Date().toLocaleDateString('ar-SA'),
-        status: 'approved',
-      };
+      // Refresh reviews list
+      await fetchReviews();
 
-      setReviews(prev => [newReview, ...prev]);
       setFormData({
         rating: 5,
         review: '',
@@ -77,11 +92,7 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
         reviewer_email: '',
       });
       setShowForm(false);
-      setMessage('✅ تم إضافة التقييم بنجاح!');
-
-      if (onReviewAdded) {
-        onReviewAdded(newReview);
-      }
+      setMessage('✅ تم إضافة التقييم بنجاح! شكراً لك');
 
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
@@ -171,7 +182,7 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
             <input
               type="text"
               name="reviewer"
-              placeholder="اسمك"
+              placeholder="اسمك الكامل"
               required
               value={formData.reviewer}
               onChange={handleInputChange}
@@ -199,8 +210,8 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, rating }))}
                   disabled={loading}
-                  className={`text-3xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    rating <= formData.rating ? 'text-gold' : 'text-gray-300'
+                  className={`text-3xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                    rating <= formData.rating ? 'text-gold' : 'text-gray-300 hover:text-gold/50'
                   }`}
                 >
                   ★
@@ -233,7 +244,11 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
 
       {/* Reviews List */}
       <div className="space-y-6">
-        {reviews.length > 0 ? (
+        {fetching ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>جاري تحميل التقييمات...</p>
+          </div>
+        ) : reviews.length > 0 ? (
           reviews.map((review, idx) => (
             <div key={review.id || idx} className="pb-6 border-b last:border-b-0">
               <div className="flex items-start justify-between mb-2">
@@ -250,7 +265,11 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
                     ))}
                   </div>
                 </div>
-                <p className="text-sm text-gray-500">{review.date || 'اليوم'}</p>
+                <p className="text-sm text-gray-500">
+                  {review.date_created 
+                    ? new Date(review.date_created).toLocaleDateString('ar-SA')
+                    : 'اليوم'}
+                </p>
               </div>
               <p className="text-gray-600 whitespace-pre-wrap">{review.review}</p>
             </div>
