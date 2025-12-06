@@ -8,6 +8,7 @@ import ShopFiltersBar from '../../components/shop/ShopFiltersBar';
 import ProductsGrid from '../../components/shop/ProductsGrid';
 import Pagination from '../../components/shop/Pagination';
 import ShopFeatures from '../../components/shop/ShopFeatures';
+import DigitalSubscriptionsBanner from '../../components/shop/DigitalSubscriptionsBanner';
 import { motion } from 'framer-motion';
 
 export default function Shop({ initialProducts, initialTotal, initialTotalPages, categories }) {
@@ -94,15 +95,19 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
       description="تصفح مجموعة واسعة من الاشتراكات والخدمات الرقمية"
     >
       <div className="container-custom section-padding">
+        {/* Digital Subscriptions Banner */}
+        <DigitalSubscriptionsBanner />
+
         {/* Shop Header */}
         <ShopHeader />
 
         {/* Search Bar */}
         <SearchBar
           searchTerm={searchTerm}
-          onSearch={(e) => {
-            setSearchTerm(e.target.value);
+          onSearchChange={(value) => {
+            setSearchTerm(value);
           }}
+          onSearchSubmit={handleSearch}
           onClear={handleSearchClear}
         />
 
