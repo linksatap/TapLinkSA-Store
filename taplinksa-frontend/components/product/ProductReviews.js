@@ -1,4 +1,4 @@
-// components/product/ProductReviews.js - Updated with API Integration
+// components/product/ProductReviews.js - Updated to work with new API
 
 import { useState } from 'react';
 
@@ -7,13 +7,12 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  
+
   const [formData, setFormData] = useState({
     rating: 5,
-    title: '',
-    comment: '',
-    name: '',
-    email: '',
+    review: '',
+    reviewer: '',
+    reviewer_email: '',
   });
 
   const handleInputChange = (e) => {
@@ -30,40 +29,60 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
     setMessage('');
 
     try {
-      // Send to API endpoint
-      const res = await fetch('/api/reviews/add', {
+      // Validate form
+      if (!formData.reviewer.trim()) {
+        throw new Error('الاسم مطلوب');
+      }
+      if (!formData.reviewer_email.trim()) {
+        throw new Error('البريد الإلكتروني مطلوب');
+      }
+      if (!formData.review.trim() || formData.review.trim().length < 10) {
+        throw new Error('التقييم يجب أن يكون 10 أحرف على الأقل');
+      }
+
+      console.log('📤 Sending review to API:', {
+        productId,
+        ...formData,
+      });
+
+      const res = await fetch(`/api/reviews/${productId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          productId,
-          ...formData,
-        }),
+        body: JSON.stringify(formData),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'خطأ في إضافة التقييم');
+        throw new Error(data.error || 'فشل إضافة التقييم');
       }
+
+      console.log('✅ Review added successfully');
 
       // Add new review to list
       const newReview = {
         ...formData,
+        id: data.review?.id || Date.now(),
         date: new Date().toLocaleDateString('ar-SA'),
+        status: 'approved',
       };
-      
+
       setReviews(prev => [newReview, ...prev]);
-      setFormData({ rating: 5, title: '', comment: '', name: '', email: '' });
+      setFormData({
+        rating: 5,
+        review: '',
+        reviewer: '',
+        reviewer_email: '',
+      });
       setShowForm(false);
       setMessage('✅ تم إضافة التقييم بنجاح!');
-      
+
       if (onReviewAdded) {
         onReviewAdded(newReview);
       }
 
-      // Clear message after 3 seconds
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Error adding review:', error);
@@ -73,9 +92,10 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
     }
   };
 
-  const averageRating = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
-    : 0;
+  const averageRating =
+    reviews.length > 0
+      ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
+      : 0;
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-5 md:p-8 mb-12">
@@ -84,7 +104,13 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
 
       {/* Message */}
       {message && (
-        <div className={`p-4 rounded-lg mb-6 ${message.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+        <div
+          className={`p-4 rounded-lg mb-6 ${
+            message.includes('✅')
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}
+        >
           {message}
         </div>
       )}
@@ -96,7 +122,12 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
             <div className="text-4xl font-bold text-gold mb-2">{averageRating}</div>
             <div className="flex justify-center gap-1 mb-2">
               {[...Array(5)].map((_, i) => (
-                <span key={i} className={i < Math.round(averageRating) ? 'text-2xl text-gold' : 'text-2xl text-gray-300'}>
+                <span
+                  key={i}
+                  className={
+                    i < Math.round(averageRating) ? 'text-2xl text-gold' : 'text-2xl text-gray-300'
+                  }
+                >
                   ★
                 </span>
               ))}
@@ -107,15 +138,12 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
           <div className="flex-1 space-y-2">
             {[5, 4, 3, 2, 1].map(rating => {
               const count = reviews.filter(r => r.rating === rating).length;
-              const percentage = reviews.length > 0 ? (count / reviews.length * 100) : 0;
+              const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
               return (
                 <div key={rating} className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">{rating} ⭐</span>
                   <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gold"
-                      style={{ width: `${percentage}%` }}
-                    />
+                    <div className="h-full bg-gold" style={{ width: `${percentage}%` }} />
                   </div>
                   <span className="text-sm text-gray-500 w-8 text-right">{count}</span>
                 </div>
@@ -129,7 +157,7 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
           <button
             onClick={() => setShowForm(!showForm)}
             disabled={loading}
-            className="btn-primary py-3 px-6 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary py-3 px-6 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             {showForm ? 'إلغاء' : 'اكتب تقييماً'}
           </button>
@@ -142,36 +170,25 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
           <div className="grid md:grid-cols-2 gap-6">
             <input
               type="text"
-              name="name"
+              name="reviewer"
               placeholder="اسمك"
               required
-              value={formData.name}
+              value={formData.reviewer}
               onChange={handleInputChange}
               disabled={loading}
-              className="form-control disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:border-gold focus:outline-none"
             />
             <input
               type="email"
-              name="email"
+              name="reviewer_email"
               placeholder="بريدك الإلكتروني"
               required
-              value={formData.email}
+              value={formData.reviewer_email}
               onChange={handleInputChange}
               disabled={loading}
-              className="form-control disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:border-gold focus:outline-none"
             />
           </div>
-
-          <input
-            type="text"
-            name="title"
-            placeholder="عنوان التقييم"
-            required
-            value={formData.title}
-            onChange={handleInputChange}
-            disabled={loading}
-            className="form-control disabled:opacity-50 disabled:cursor-not-allowed"
-          />
 
           <div>
             <label className="block text-sm font-bold mb-2">التقييم</label>
@@ -193,22 +210,23 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
           </div>
 
           <textarea
-            name="comment"
-            placeholder="رأيك في المنتج..."
+            name="review"
+            placeholder="رأيك في المنتج... (10 أحرف على الأقل)"
             required
             rows="5"
-            value={formData.comment}
+            value={formData.review}
             onChange={handleInputChange}
             disabled={loading}
-            className="form-control disabled:opacity-50 disabled:cursor-not-allowed"
+            minLength="10"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:border-gold focus:outline-none"
           />
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
-            className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            {loading ? 'جاري الإرسال...' : 'إرسال التقييم'}
+            {loading ? '⏳ جاري الإرسال...' : '✓ إرسال التقييم'}
           </button>
         </form>
       )}
@@ -217,22 +235,24 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
       <div className="space-y-6">
         {reviews.length > 0 ? (
           reviews.map((review, idx) => (
-            <div key={idx} className="pb-6 border-b last:border-b-0">
+            <div key={review.id || idx} className="pb-6 border-b last:border-b-0">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <p className="font-bold text-dark">{review.name}</p>
+                  <p className="font-bold text-dark">{review.reviewer}</p>
                   <div className="flex gap-1 mt-1">
                     {[...Array(5)].map((_, i) => (
-                      <span key={i} className={i < review.rating ? 'text-gold' : 'text-gray-300'}>
+                      <span
+                        key={i}
+                        className={i < review.rating ? 'text-gold' : 'text-gray-300'}
+                      >
                         ★
                       </span>
                     ))}
                   </div>
                 </div>
-                <p className="text-sm text-gray-500">{review.date}</p>
+                <p className="text-sm text-gray-500">{review.date || 'اليوم'}</p>
               </div>
-              <h4 className="font-bold mb-2">{review.title}</h4>
-              <p className="text-gray-600">{review.comment}</p>
+              <p className="text-gray-600 whitespace-pre-wrap">{review.review}</p>
             </div>
           ))
         ) : (
