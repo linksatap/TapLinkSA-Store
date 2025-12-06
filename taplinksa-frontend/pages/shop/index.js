@@ -15,7 +15,7 @@ import ShopFeatures from '../../components/shop/ShopFeatures';
 // API FUNCTIONS - Keep all existing logic
 // ============================================
 
-const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL;
+const WC_API_URL = process.env.NEXT_PUBLIC_WC_API;
 const WC_CONSUMER_KEY = process.env.NEXT_PUBLIC_WC_CONSUMER_KEY;
 const WC_CONSUMER_SECRET = process.env.NEXT_PUBLIC_WC_CONSUMER_SECRET;
 
