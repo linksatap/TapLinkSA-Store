@@ -232,9 +232,7 @@ export default function ProductPage({ product: initialProduct, variations: initi
               )}
 
               {/* Variants Selection */}
-         // Update in pages/shop/[slug].js - Replace the Variants Selection section
 
-// Find this section and replace it:
 
               {/* Variants Selection */}
               {initialVariations.length > 0 && (
