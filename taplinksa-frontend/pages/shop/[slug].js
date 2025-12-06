@@ -232,6 +232,11 @@ export default function ProductPage({ product: initialProduct, variations: initi
               )}
 
               {/* Variants Selection */}
+         // Update in pages/shop/[slug].js - Replace the Variants Selection section
+
+// Find this section and replace it:
+
+              {/* Variants Selection */}
               {initialVariations.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <h3 className="font-bold text-dark mb-4">اختر النوع:</h3>
@@ -243,6 +248,23 @@ export default function ProductPage({ product: initialProduct, variations: initi
                         varRegularPrice > varPrice
                           ? Math.round(((varRegularPrice - varPrice) / varRegularPrice) * 100)
                           : 0;
+
+                      // Decode variation attributes
+                      const decodedAttributes = variation.attributes?.map(attr => {
+                        try {
+                          return {
+                            ...attr,
+                            name: decodeURIComponent(attr.name || ''),
+                            option: decodeURIComponent(attr.option || ''),
+                          };
+                        } catch (e) {
+                          return attr;
+                        }
+                      }) || [];
+
+                      const attributeText = decodedAttributes
+                        .map(attr => `${attr.option}`)
+                        .join(' - ');
 
                       return (
                         <button
@@ -258,9 +280,7 @@ export default function ProductPage({ product: initialProduct, variations: initi
                           <div className="flex justify-between items-center">
                             <div className="text-right">
                               <p className="font-bold text-dark">
-                                {variation.attributes
-                                  ?.map(attr => `${attr.option}`)
-                                  .join(' - ')}
+                                {attributeText || 'النوع الافتراضي'}
                               </p>
                               <div className="flex gap-2 mt-1">
                                 <span className="text-gold font-bold">
@@ -283,7 +303,6 @@ export default function ProductPage({ product: initialProduct, variations: initi
                   </div>
                 </div>
               )}
-
               {/* Regular Variants */}
               <ProductVariants
                 attributes={product.attributes}

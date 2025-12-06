@@ -1,4 +1,4 @@
-// lib/woocommerce.js
+// lib/woocommerce.js - Updated with URL Decoding
 
 export async function fetchProductWithVariations(slug, headers) {
   const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL || 'https://your-woocommerce-site.com/wp-json/wc/v3';
@@ -23,7 +23,7 @@ export async function fetchProductWithVariations(slug, headers) {
           { headers }
         );
         variations = await variationsRes.json();
-        variations = Array.isArray(variations) ? variations : [];
+        variations = Array.isArray(variations) ? variations.map(decodeVariation) : [];
       } catch (err) {
         console.error('Error fetching variations:', err);
       }
@@ -50,5 +50,27 @@ export async function fetchRelatedProducts(productId, headers) {
   } catch (err) {
     console.error('Error fetching related products:', err);
     return [];
+  }
+}
+
+// Helper function to decode variation attributes
+function decodeVariation(variation) {
+  return {
+    ...variation,
+    attributes: variation.attributes?.map(attr => ({
+      ...attr,
+      name: decodeURIComponent(attr.name || ''),
+      option: decodeURIComponent(attr.option || ''),
+    })) || [],
+  };
+}
+
+// Helper function to decode text
+export function decodeText(text) {
+  if (!text) return '';
+  try {
+    return decodeURIComponent(text);
+  } catch (err) {
+    return text;
   }
 }
