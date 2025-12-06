@@ -95,6 +95,7 @@ export default function ProductPage({ product: initialProduct, variations: initi
     productState.setSelectedImage(0);
   };
 
+ 
   // Handle cart operations
   const handleAddToCart = () => {
     const itemData = {
@@ -106,12 +107,17 @@ export default function ProductPage({ product: initialProduct, variations: initi
         image: selectedVariation.image,
       }),
     };
-    
+
+    // استدعاء منطق إضافة المنتج للسلة
     productActions.handleAddToCart(
       itemData,
       productState.quantity,
       productState.selectedOptions
     );
+
+    // إظهار إشعار
+    setToast('تم إضافة المنتج إلى السلة بنجاح');
+    setTimeout(() => setToast(null), 2500);
   };
 
   const handleBuyNow = () => {
