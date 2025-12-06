@@ -11,8 +11,8 @@ export default async function handler(req, res) {
 
   try {
     const WC_API_URL = process.env.NEXT_PUBLIC_WC_API;
-    const WC_CONSUMER_KEY = process.env.NEXT_PUBLIC_WC_CONSUMER_KEY;
-    const WC_CONSUMER_SECRET = process.env.NEXT_PUBLIC_WC_CONSUMER_SECRET;
+    const WC_CONSUMER_KEY = process.env.WC_CONSUMER_KEY;
+    const WC_CONSUMER_SECRET = process.env.WC_CONSUMER_SECRET;
 
     if (!WC_API_URL || !WC_CONSUMER_KEY || !WC_CONSUMER_SECRET) {
       console.error('❌ Missing WooCommerce credentials');
