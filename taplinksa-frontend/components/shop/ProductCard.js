@@ -8,9 +8,15 @@ import Badge from '../ui/Badge';
 export default function ProductCard({ product }) {
   const router = useRouter();
   const { addToCart } = useCart();
+
   const image = product.images?.[0]?.src || '/placeholder-product.jpg';
   const price = parseFloat(product.price);
   const regularPrice = parseFloat(product.regular_price);
+  const isOnSale = product.on_sale && regularPrice > price;
+  const isInStock = product.stock_status === 'instock';
+  const discount = isOnSale 
+    ? Math.round(((regularPrice - price) / regularPrice) * 100) 
+    : 0;
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -26,77 +32,109 @@ export default function ProductCard({ product }) {
 
   return (
     <motion.div
-      whileHover={{ y: -8 }}
-      className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow group"
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      viewport={{ once: true, margin: '-50px' }}
+      className="group flex flex-col h-full bg-white rounded-lg border border-gray-200 hover:border-teal-300 overflow-hidden transition-all duration-300 hover:shadow-lg"
     >
-      <Link href={`/shop/${product.slug}`}>
-        <div className="relative aspect-square overflow-hidden bg-gray-100">
-          <Image
-            src={image}
-            alt={product.name}
-            fill
-            className="object-cover group-hover:scale-110 transition-transform duration-500"
-          />
-          
-          {product.on_sale && (
-            <Badge variant="sale" className="absolute top-4 right-4">
-              تخفيض
+      {/* Product Image Container */}
+      <div className="relative w-full bg-gray-50 aspect-square overflow-hidden flex items-center justify-center">
+        <Link href={`/product/${product.slug}`}>
+          <a className="relative w-full h-full block">
+            <Image
+              src={image}
+              alt={product.name}
+              layout="fill"
+              objectFit="cover"
+              className="group-hover:scale-105 transition-transform duration-300"
+              priority={false}
+            />
+          </a>
+        </Link>
+
+        {/* Badge Container - Top Left */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+          {isOnSale && discount > 0 && (
+            <Badge 
+              variant="sale" 
+              className="bg-red-500 text-white text-xs font-bold px-2 py-1"
+            >
+              -{discount}%
             </Badge>
           )}
-          
           {product.featured && (
-            <Badge variant="primary" className="absolute top-4 left-4">
+            <Badge 
+              variant="featured" 
+              className="bg-amber-400 text-slate-900 text-xs font-bold px-2 py-1"
+            >
               الأكثر مبيعاً
             </Badge>
           )}
         </div>
-      </Link>
 
-      <div className="p-6">
-        <Link href={`/shop/${product.slug}`}>
-          <h3 className="text-xl font-bold mb-2 group-hover:text-gold transition-colors line-clamp-2">
-            {product.name}
-          </h3>
-        </Link>
-        
-        <div
-          className="text-gray-600 text-sm mb-4 line-clamp-2"
-          dangerouslySetInnerHTML={{ __html: product.short_description }}
-        />
-        
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-gold">
-              {price} ر.س
-            </span>
-            {product.on_sale && regularPrice > price && (
-              <span className="text-sm text-gray-400 line-through">
-                {regularPrice}
-              </span>
-            )}
+        {/* Stock Status - Top Right */}
+        {!isInStock && (
+          <div className="absolute top-3 right-3 bg-gray-900 bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+            غير متوفر
           </div>
-          
-          <Badge variant={product.stock_status === 'instock' ? 'success' : 'error'}>
-            {product.stock_status === 'instock' ? 'متوفر' : 'غير متوفر'}
-          </Badge>
+        )}
+      </div>
+
+      {/* Product Info Container */}
+      <div className="flex-1 flex flex-col p-4 space-y-3">
+        {/* Product Name */}
+        <Link href={`/product/${product.slug}`}>
+          <a className="line-clamp-2 font-semibold text-slate-900 hover:text-teal-600 transition-colors text-sm leading-tight">
+            {product.name}
+          </a>
+        </Link>
+
+        {/* Price Section */}
+        <div className="flex items-baseline gap-2">
+          <span className="text-lg font-bold text-slate-900">
+            {price.toFixed(2)} ر.س
+          </span>
+          {isOnSale && regularPrice > price && (
+            <span className="text-sm text-gray-400 line-through">
+              {regularPrice.toFixed(2)}
+            </span>
+          )}
         </div>
 
-        {/* أزرار الشراء */}
-        <div className="flex flex-col gap-2">
+        {/* Stock Status Badge */}
+        <div className={`text-xs font-medium ${isInStock ? 'text-green-600' : 'text-red-600'}`}>
+          {isInStock ? '✓ متوفر' : '✗ غير متوفر'}
+        </div>
+
+        {/* Spacer for flex layout */}
+        <div className="flex-1" />
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-3 border-t border-gray-100">
           <button
             onClick={handleBuyNow}
-            disabled={product.stock_status !== 'instock'}
-            className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!isInStock}
+            className={`flex-1 py-2.5 px-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+              isInStock
+                ? 'bg-teal-600 text-white hover:bg-teal-700 active:scale-95'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            aria-label={`شراء ${product.name} الآن`}
           >
-            🚀 شراء الآن
+            شراء الآن
           </button>
-
           <button
             onClick={handleAddToCart}
-            disabled={product.stock_status !== 'instock'}
-            className="btn-secondary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!isInStock}
+            className={`flex-1 py-2.5 px-3 rounded-lg font-semibold text-sm transition-all duration-200 ${
+              isInStock
+                ? 'border-2 border-teal-600 text-teal-600 hover:bg-teal-50 active:scale-95'
+                : 'border-2 border-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            aria-label={`إضافة ${product.name} للسلة`}
           >
-            🛒 إضافة للسلة
+            السلة
           </button>
         </div>
       </div>
