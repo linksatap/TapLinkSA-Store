@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       console.log('📥 Fetching reviews for product:', productId);
       console.log('🔗 API URL:', apiUrl);
       
-      const url = `${apiUrl}/products/${productId}/reviews?per_page=100&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+      const url = `https://cms.taplinksa.com/wp-json/wc/v3/products/${productId}/reviews?per_page=100&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
       
       console.log('📍 Requesting:', url.replace(consumerKey, 'KEY').replace(consumerSecret, 'SECRET'));
 
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
 
       console.log('📊 Payload:', payload);
 
-      const url = `${apiUrl}/products/${productId}/reviews?consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+      const url = `https://cms.taplinksa.com/wp-json/wc/v3/products/${productId}/reviews?consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
 
       const response = await fetch(url, {
         method: 'POST',
