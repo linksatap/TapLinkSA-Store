@@ -297,8 +297,7 @@ export default function Header() {
               }`}
             />
           </button>
-        </div>
-
+          
             {/* Cart Icon */}
             <Link href="/cart" className="relative">
               <motion.div
@@ -336,6 +335,8 @@ export default function Header() {
                 )}
               </motion.div>
             </Link>
+        </div>
+
         {/* Mobile Menu */}
         <AnimatePresence>
           {isOpen && (
