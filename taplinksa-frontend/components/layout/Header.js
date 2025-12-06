@@ -88,7 +88,7 @@ export default function Header() {
               }`}
             >
               <span className="text-gold">منجر</span>
-              <span>تاب</span>
+              <span> لينكتاب</span>
               <span className="text-gold">SA</span>
             </motion.span>
           </Link>
