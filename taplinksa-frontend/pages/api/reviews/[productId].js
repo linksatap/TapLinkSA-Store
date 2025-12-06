@@ -64,7 +64,7 @@ export default async function handler(req, res) {
       console.log('📊 Review data:', { rating, reviewer, reviewer_email });
 
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/shop/${productId}/reviews`,
         {
           product_id: parseInt(productId),
           review: review.trim(),
