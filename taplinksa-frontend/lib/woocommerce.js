@@ -1,15 +1,15 @@
-// API Helper - lib/woocommerce.js
+// lib/woocommerce.js
 
 export async function fetchProductWithVariations(slug, headers) {
   const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL || 'https://your-woocommerce-site.com/wp-json/wc/v3';
-  
+
   try {
     // 1. Fetch main product
     const productRes = await fetch(`${WC_API_URL}/products?slug=${encodeURIComponent(slug)}`, { headers });
     const products = await productRes.json();
-    
+
     const product = Array.isArray(products) && products.length > 0 ? products[0] : null;
-    
+
     if (!product) {
       return { product: null, variations: [] };
     }
@@ -38,7 +38,7 @@ export async function fetchProductWithVariations(slug, headers) {
 
 export async function fetchRelatedProducts(productId, headers) {
   const WC_API_URL = process.env.NEXT_PUBLIC_WC_API_URL;
-  
+
   try {
     const res = await fetch(
       `${WC_API_URL}/products?per_page=8&orderby=popularity`,
