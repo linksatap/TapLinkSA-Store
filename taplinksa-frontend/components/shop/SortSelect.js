@@ -1,32 +1,28 @@
 import { motion } from 'framer-motion';
 
-export default function SortSelect({ onSort, currentSort }) {
-  const sortOptions = [
-    { value: 'latest', label: 'الأحدث' },
-    { value: 'popular', label: 'الأكثر مبيعاً' },
-    { value: 'price_asc', label: 'السعر: من الأقل للأعلى' },
-    { value: 'price_desc', label: 'السعر: من الأعلى للأقل' },
-    { value: 'rating', label: 'الأعلى تقييماً' },
-  ];
-
+export default function SortSelect({ currentSortBy, onSortChange }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="w-full md:w-auto"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.5, duration: 0.6 }}
+      className="flex items-center gap-3"
     >
+      <label htmlFor="sort-select" className="font-medium text-gray-700 whitespace-nowrap">
+        ترتيب حسب:
+      </label>
       <select
-        value={currentSort}
-        onChange={(e) => onSort(e.target.value)}
-        className="w-full md:w-auto py-3 px-4 rounded-lg border-2 border-gray-200 bg-white text-slate-900 font-medium focus:border-teal-500 focus:outline-none cursor-pointer hover:border-gray-300 transition-all duration-200"
+        id="sort-select"
+        value={currentSortBy}
+        onChange={(e) => onSortChange(e.target.value)}
+        className="px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-gold focus:outline-none bg-white cursor-pointer font-medium transition-all duration-300 hover:border-gray-300 text-gray-900 appearance-none"
         aria-label="ترتيب المنتجات"
       >
-        {sortOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        <option value="date">الأحدث أولاً</option>
+        <option value="popularity">الأكثر مبيعاً</option>
+        <option value="rating">الأعلى تقييماً</option>
+        <option value="price">الأقل سعراً</option>
+        <option value="price-desc">الأعلى سعراً</option>
       </select>
     </motion.div>
   );

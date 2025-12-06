@@ -1,52 +1,63 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 
-export default function SearchBar({ onSearch, placeholder = 'ابحث عن منتجات...' }) {
-  const [value, setValue] = useState('');
+export default function SearchBar({ searchTerm, onSearch, onClear }) {
   const [isFocused, setIsFocused] = useState(false);
 
-  const handleChange = (e) => {
-    const newValue = e.target.value;
-    setValue(newValue);
-    onSearch(newValue);
-  };
-
-  const handleClear = () => {
-    setValue('');
-    onSearch('');
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSearch(e);
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="w-full"
+      transition={{ delay: 0.4, duration: 0.6 }}
+      className="mb-8"
     >
-      <div className={`relative flex items-center bg-white rounded-lg border-2 transition-all duration-300 ${
-        isFocused ? 'border-teal-500 shadow-lg' : 'border-gray-200'
-      }`}>
-        <span className="px-4 text-gray-400">🔍</span>
-        <input
-          type="text"
-          value={value}
-          onChange={handleChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={placeholder}
-          className="flex-1 px-2 py-3 md:py-4 outline-none text-slate-900 placeholder-gray-400 text-sm md:text-base"
-          aria-label="البحث عن منتجات"
-        />
-        {value && (
+      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => {
+              // Parent component handles state
+              const event = new Event('input', { bubbles: true });
+              event.target = e.target;
+              onSearch(event);
+            }}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder="ابحث عن اشتراكات أو خدمات..."
+            className={`w-full px-6 py-4 pr-16 rounded-xl border-2 transition-all duration-300 text-lg ${
+              isFocused
+                ? 'border-gold shadow-lg shadow-gold/30'
+                : 'border-gray-200 shadow-md'
+            } focus:outline-none bg-white`}
+            aria-label="البحث عن المنتجات"
+          />
+
           <button
-            onClick={handleClear}
-            className="px-4 text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="مسح البحث"
+            type="submit"
+            className="absolute left-3 top-1/2 -translate-y-1/2 px-4 py-2 bg-gold text-gray-900 font-semibold rounded-lg hover:bg-yellow-500 transition-all duration-300 active:scale-95"
+            aria-label="بحث"
           >
-            ✕
+            🔍
           </button>
-        )}
-      </div>
+
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="مسح البحث"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </form>
     </motion.div>
   );
 }

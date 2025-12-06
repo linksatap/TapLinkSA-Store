@@ -1,87 +1,34 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import SearchBar from './SearchBar';
-import CategoriesFilter from './CategoriesFilter';
+import { motion } from 'framer-motion';
 import SortSelect from './SortSelect';
 
 export default function ShopFiltersBar({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-  searchTerm,
-  onSearch,
-  sortBy,
-  onSort,
-  totalProducts,
+  products,
+  initialTotal,
+  currentSortBy,
+  onSortChange,
 }) {
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-
   return (
-    <>
-      {/* Desktop Layout - Always Visible */}
-      <div className="hidden sm:flex flex-col gap-4 sticky top-0 z-20 bg-white border-b border-gray-200 p-4 md:p-6 rounded-b-lg">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-slate-900">
-            المنتجات ({totalProducts})
-          </h2>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.6, duration: 0.5 }}
+      className="mb-8 bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+    >
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        {/* Results Counter */}
+        <div className="text-gray-700">
+          <p>
+            عرض{' '}
+            <span className="font-bold text-gold text-lg">{products.length}</span>
+            {' '}من أصل{' '}
+            <span className="font-bold text-lg">{initialTotal}</span>
+            {' '}منتج
+          </p>
         </div>
 
-        <SearchBar onSearch={onSearch} />
-
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
-            <CategoriesFilter
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onSelectCategory={onSelectCategory}
-            />
-          </div>
-          <SortSelect onSort={onSort} currentSort={sortBy} />
-        </div>
+        {/* Sort Selector */}
+        <SortSelect currentSortBy={currentSortBy} onSortChange={onSortChange} />
       </div>
-
-      {/* Mobile Layout - Collapsible */}
-      <div className="sm:hidden sticky top-0 z-30 bg-white border-b border-gray-200">
-        <div className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">
-              المنتجات ({totalProducts})
-            </h2>
-            <button
-              onClick={() => setShowMobileFilters(!showMobileFilters)}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                showMobileFilters
-                  ? 'bg-teal-100 text-teal-700'
-                  : 'bg-gray-100 text-slate-700'
-              }`}
-              aria-label="فتح الفلاتر"
-            >
-              ⚙️ الفلاتر
-            </button>
-          </div>
-
-          <SearchBar onSearch={onSearch} />
-
-          <AnimatePresence>
-            {showMobileFilters && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-3 pt-3 border-t border-gray-200"
-              >
-                <CategoriesFilter
-                  categories={categories}
-                  selectedCategory={selectedCategory}
-                  onSelectCategory={onSelectCategory}
-                />
-                <SortSelect onSort={onSort} currentSort={sortBy} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-    </>
+    </motion.div>
   );
 }

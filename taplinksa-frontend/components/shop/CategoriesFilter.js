@@ -1,133 +1,74 @@
-import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 
-export default function CategoriesFilter({ 
-  categories, 
-  selectedCategory, 
-  onSelectCategory 
+export default function CategoriesFilter({
+  categories,
+  currentCategory,
+  onCategoryChange,
+  initialTotal,
 }) {
-  const scrollContainerRef = useRef(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
-  const checkScroll = () => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      setCanScrollLeft(container.scrollLeft > 0);
-      setCanScrollRight(
-        container.scrollLeft < container.scrollWidth - container.clientWidth - 10
-      );
-    }
-  };
-
-  const scroll = (direction) => {
-    const container = scrollContainerRef.current;
-    const scrollAmount = 200;
-    container.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
-  };
+  const displayCategories = showAllCategories ? categories : categories.slice(0, 4);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="w-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.5, duration: 0.6 }}
+      className="mb-8"
     >
-      <div className="relative">
-        {/* Desktop - Static Grid */}
-        <div className="hidden sm:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+      <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+        <h3 className="text-lg font-bold mb-4 text-gray-900">التصنيفات</h3>
+
+        {/* All Categories Button */}
+        <div className="mb-4 pb-4 border-b border-gray-200">
           <button
-            onClick={() => onSelectCategory(null)}
-            className={`py-2 px-3 rounded-lg font-medium text-sm transition-all duration-200 ${
-              selectedCategory === null
-                ? 'bg-teal-600 text-white shadow-md'
-                : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+            onClick={() => onCategoryChange()}
+            className={`w-full px-4 py-3 rounded-lg font-medium transition-all duration-300 ${
+              !currentCategory
+                ? 'bg-gold text-gray-900 shadow-lg shadow-gold/40 font-bold'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
+            aria-pressed={!currentCategory}
+            aria-label="جميع التصنيفات"
           >
-            الكل
+            جميع التصنيفات
+            <span className="text-sm mr-2 opacity-75">({initialTotal})</span>
           </button>
-          {categories.map((category) => (
+        </div>
+
+        {/* Category Buttons */}
+        <div className="flex flex-wrap gap-3 mb-4">
+          {displayCategories.map((cat) => (
             <button
-              key={category.id}
-              onClick={() => onSelectedCategory(category.slug)}
-              className={`py-2 px-3 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap ${
-                selectedCategory === category.slug
-                  ? 'bg-teal-600 text-white shadow-md'
-                  : 'bg-gray-100 text-slate-700 hover:bg-gray-200'
+              key={cat.id}
+              onClick={() => onCategoryChange(cat.id)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 text-sm ${
+                currentCategory === cat.id.toString()
+                  ? 'bg-gold text-gray-900 shadow-lg shadow-gold/40'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              aria-pressed={currentCategory === cat.id.toString()}
+              aria-label={`تصنيف ${cat.name}`}
             >
-              {category.name}
+              {cat.name}
+              <span className="text-xs opacity-75 ml-1">({cat.count})</span>
             </button>
           ))}
         </div>
 
-        {/* Mobile - Horizontal Scroll */}
-        <div className="sm:hidden flex items-center gap-2">
-          {canScrollLeft && (
-            <button
-              onClick={() => scroll('left')}
-              className="flex-shrink-0 p-2 rounded-lg bg-gray-100 text-slate-700 hover:bg-gray-200"
-              aria-label="تمرير يسارا"
-            >
-              ←
-            </button>
-          )}
-
-          <div
-            ref={scrollContainerRef}
-            onScroll={checkScroll}
-            onLoad={checkScroll}
-            className="flex-1 flex gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar"
+        {/* Show More Button */}
+        {categories.length > 4 && (
+          <button
+            onClick={() => setShowAllCategories(!showAllCategories)}
+            className="text-gold font-semibold text-sm hover:underline transition-all"
+            aria-expanded={showAllCategories}
           >
-            <button
-              onClick={() => onSelectCategory(null)}
-              className={`flex-shrink-0 py-2 px-3 rounded-lg font-medium text-sm transition-all duration-200 snap-start ${
-                selectedCategory === null
-                  ? 'bg-teal-600 text-white shadow-md'
-                  : 'bg-gray-100 text-slate-700'
-              }`}
-            >
-              الكل
-            </button>
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => onSelectCategory(category.slug)}
-                className={`flex-shrink-0 py-2 px-3 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap snap-start ${
-                  selectedCategory === category.slug
-                    ? 'bg-teal-600 text-white shadow-md'
-                    : 'bg-gray-100 text-slate-700'
-                }`}
-              >
-                {category.name}
-              </button>
-            ))}
-          </div>
-
-          {canScrollRight && (
-            <button
-              onClick={() => scroll('right')}
-              className="flex-shrink-0 p-2 rounded-lg bg-gray-100 text-slate-700 hover:bg-gray-200"
-              aria-label="تمرير يمينا"
-            >
-              →
-            </button>
-          )}
-        </div>
+            {showAllCategories ? 'عرض أقل ▲' : 'عرض المزيد ▼'}
+          </button>
+        )}
       </div>
-
-      <style jsx>{`
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </motion.div>
   );
 }

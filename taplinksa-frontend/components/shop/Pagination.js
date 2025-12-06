@@ -6,77 +6,121 @@ export default function Pagination({
   onPageChange,
   isLoading,
 }) {
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    const halfVisible = Math.floor(maxVisiblePages / 2);
+
+    let startPage = Math.max(1, currentPage - halfVisible);
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage < maxVisiblePages - 1) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    if (startPage > 1) {
+      pages.push(
+        <button
+          key={1}
+          onClick={() => onPageChange(1)}
+          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition-all font-medium"
+          aria-label="الصفحة 1"
+        >
+          1
+        </button>
+      );
+
+      if (startPage > 2) {
+        pages.push(
+          <span key="ellipsis-start" className="px-2 py-2 text-gray-500">
+            ...
+          </span>
+        );
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => onPageChange(i)}
+          disabled={isLoading}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            currentPage === i
+              ? 'bg-gold text-gray-900 border-gold border shadow-lg shadow-gold/40'
+              : 'border border-gray-300 hover:bg-gray-100'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          aria-current={currentPage === i ? 'page' : undefined}
+          aria-label={`الصفحة ${i}`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        pages.push(
+          <span key="ellipsis-end" className="px-2 py-2 text-gray-500">
+            ...
+          </span>
+        );
+      }
+
+      pages.push(
+        <button
+          key={totalPages}
+          onClick={() => onPageChange(totalPages)}
+          className="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition-all font-medium"
+          aria-label={`الصفحة ${totalPages}`}
+        >
+          {totalPages}
+        </button>
+      );
+    }
+
+    return pages;
+  };
+
   if (totalPages <= 1) return null;
-
-  const pages = [];
-  const showEllipsisStart = currentPage > 3;
-  const showEllipsisEnd = currentPage < totalPages - 2;
-
-  if (showEllipsisStart) {
-    pages.push(1);
-    pages.push('...');
-  }
-
-  for (
-    let i = Math.max(1, currentPage - 1);
-    i <= Math.min(totalPages, currentPage + 1);
-    i++
-  ) {
-    if (!pages.includes(i)) pages.push(i);
-  }
-
-  if (showEllipsisEnd) {
-    pages.push('...');
-    pages.push(totalPages);
-  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="flex justify-center items-center gap-2 py-12"
+      transition={{ duration: 0.5 }}
+      className="mt-12 mb-8"
     >
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1 || isLoading}
-        className="px-3 py-2 rounded-lg border-2 border-gray-200 text-slate-700 hover:border-teal-500 hover:text-teal-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-        aria-label="الصفحة السابقة"
-      >
-        ←
-      </button>
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        {/* Previous Button */}
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1 || isLoading}
+          className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+          aria-label="الصفحة السابقة"
+        >
+          ← السابق
+        </button>
 
-      {pages.map((page, index) =>
-        page === '...' ? (
-          <span key={`ellipsis-${index}`} className="px-2 text-gray-400">
-            ...
-          </span>
-        ) : (
-          <button
-            key={page}
-            onClick={() => onPageChange(page)}
-            disabled={isLoading}
-            className={`w-10 h-10 rounded-lg font-semibold transition-all duration-200 ${
-              currentPage === page
-                ? 'bg-teal-600 text-white shadow-md'
-                : 'border-2 border-gray-200 text-slate-700 hover:border-teal-500'
-            }`}
-            aria-label={`الصفحة ${page}`}
-            aria-current={currentPage === page ? 'page' : undefined}
-          >
-            {page}
-          </button>
-        )
-      )}
+        {/* Page Numbers */}
+        <div className="flex gap-1">{renderPageNumbers()}</div>
 
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages || isLoading}
-        className="px-3 py-2 rounded-lg border-2 border-gray-200 text-slate-700 hover:border-teal-500 hover:text-teal-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-        aria-label="الصفحة التالية"
-      >
-        →
-      </button>
+        {/* Next Button */}
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages || isLoading}
+          className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+          aria-label="الصفحة التالية"
+        >
+          التالي →
+        </button>
+      </div>
+
+      {/* Page Info */}
+      <p className="text-center mt-6 text-gray-600 text-sm">
+        الصفحة <span className="font-bold">{currentPage}</span> من{' '}
+        <span className="font-bold">{totalPages}</span>
+      </p>
     </motion.div>
   );
 }
