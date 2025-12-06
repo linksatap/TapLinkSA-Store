@@ -10,7 +10,7 @@ export default function ProductTrustBadges() {
     {
       icon: '⚡',
       title: 'تسليم فوري',
-      description: 'رقمي',
+      description: 'للمنتجات الرقمية',
       color: 'amber',
     },
     {

@@ -1,13 +1,14 @@
-// components/product/ProductReviews.js - Complete Fix
+// components/product/ProductReviews.js - Hydration Fixed
 
 import { useState, useEffect } from 'react';
 
 export default function ProductReviews({ productId, reviews: initialReviews = [] }) {
-  const [reviews, setReviews] = useState(initialReviews);
+  const [reviews, setReviews] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [fetching, setFetching] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
   const [formData, setFormData] = useState({
     rating: 5,
@@ -16,14 +17,18 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
     reviewer_email: '',
   });
 
+  // التأكد من أننا على الـ client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Fetch reviews on mount
   useEffect(() => {
+    if (!isClient || !productId) return;
     fetchReviews();
-  }, [productId]);
+  }, [productId, isClient]);
 
   const fetchReviews = async () => {
-    if (!productId) return;
-    
     setFetching(true);
     try {
       const res = await fetch(`/api/reviews/${productId}`);
@@ -31,9 +36,13 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
         const data = await res.json();
         setReviews(Array.isArray(data) ? data : []);
         console.log('✅ Reviews loaded:', data.length);
+      } else {
+        console.error('Failed to fetch reviews:', res.status);
+        setReviews([]);
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
+      setReviews([]);
     } finally {
       setFetching(false);
     }
@@ -107,6 +116,11 @@ export default function ProductReviews({ productId, reviews: initialReviews = []
     reviews.length > 0
       ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
       : 0;
+
+  // Don't render on server to avoid hydration mismatch
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-5 md:p-8 mb-12">
