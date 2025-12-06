@@ -1,4 +1,6 @@
-// pages/api/reviews/[productId].js - QUERY PARAMS VERSION
+// pages/api/reviews/[productId].js
+
+import axios from 'axios';
 
 export default async function handler(req, res) {
   const { productId } = req.query;
@@ -7,145 +9,117 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Product ID is required' });
   }
 
-  const consumerKey = process.env.WC_CONSUMER_KEY;
-  const consumerSecret = process.env.WC_CONSUMER_SECRET;
-  const apiUrl = process.env.NEXT_PUBLIC_WC_API_URL;
-
-  if (!consumerKey || !consumerSecret || !apiUrl) {
-    console.error('❌ Missing environment variables');
-    return res.status(500).json({ 
-      error: 'Server configuration error',
-      missing: {
-        key: !consumerKey,
-        secret: !consumerSecret,
-        url: !apiUrl
-      }
-    });
-  }
-
   // GET - جلب التقييمات
   if (req.method === 'GET') {
     try {
       console.log('📥 Fetching reviews for product:', productId);
-      console.log('🔗 API URL:', apiUrl);
-      
-      const url = `https://cms.taplinksa.com/wp-json/wc/v3/products/${productId}/reviews?per_page=100&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
-      
-      console.log('📍 Requesting:', url.replace(consumerKey, 'KEY').replace(consumerSecret, 'SECRET'));
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/reviews`,
+        {
+          params: {
+            product: productId, // نفس الكود القديم الذي كان يعمل
+            per_page: 100,
+          },
+          auth: {
+            username: process.env.WC_CONSUMER_KEY,
+            password: process.env.WC_CONSUMER_SECRET,
+          },
+        }
+      );
 
-      console.log('📊 Response Status:', response.status);
+      console.log(
+        '✅ Reviews fetched:',
+        Array.isArray(response.data) ? response.data.length : 0
+      );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error:', response.status, response.statusText);
-        console.error('❌ Response Body:', errorText);
-        
-        return res.status(response.status).json({ 
-          error: `WooCommerce API Error: ${response.statusText}`,
-          status: response.status,
-          details: errorText
-        });
-      }
-
-      const data = await response.json();
-      console.log('✅ Reviews fetched successfully:', Array.isArray(data) ? data.length : 0);
-      
-      res.status(200).json(Array.isArray(data) ? data : []);
+      res.status(200).json(response.data);
     } catch (error) {
-      console.error('❌ Error fetching reviews:', error.message);
-      res.status(500).json({ 
-        error: 'Failed to fetch reviews',
-        details: error.message 
-      });
+      console.error(
+        'Error fetching reviews:',
+        error.response?.data || error.message
+      );
+      res.status(500).json({ error: 'Failed to fetch reviews' });
     }
   }
 
   // POST - إضافة تقييم جديد
   else if (req.method === 'POST') {
     try {
-      const { rating, review, reviewer, reviewer_email } = req.body;
+      const token = req.headers.authorization?.replace('Bearer ', '');
 
-      // التحقق من البيانات المطلوبة
+      if (!token) {
+        return res
+          .status(401)
+          .json({ error: 'يجب تسجيل الدخول لإضافة تقييم' });
+      }
+
+      // فك تشفير التوكن (JWT)
+      const tokenParts = token.split('.');
+      if (tokenParts.length < 2) {
+        return res.status(400).json({ error: 'رمز الدخول غير صالح' });
+      }
+
+      const payload = JSON.parse(
+        Buffer.from(tokenParts[1], 'base64').toString('utf-8')
+      );
+
+      const userEmail = payload.name;
+
+      const { rating, review, reviewer } = req.body;
+
       if (!rating || rating < 1 || rating > 5) {
-        return res.status(400).json({ error: 'التقييم يجب أن يكون بين 1 و 5' });
+        return res
+          .status(400)
+          .json({ error: 'التقييم يجب أن يكون بين 1 و 5' });
       }
 
       if (!review || review.trim().length < 10) {
-        return res.status(400).json({ error: 'التقييم يجب أن يكون 10 أحرف على الأقل' });
+        return res
+          .status(400)
+          .json({ error: 'المراجعة يجب أن تكون 10 أحرف على الأقل' });
       }
 
-      if (!reviewer || reviewer.trim().length === 0) {
-        return res.status(400).json({ error: 'الاسم مطلوب' });
-      }
+      console.log('📝 Creating review for product:', productId);
 
-      if (!reviewer_email || reviewer_email.trim().length === 0) {
-        return res.status(400).json({ error: 'البريد الإلكتروني مطلوب' });
-      }
-
-      // التحقق من صيغة البريد الإلكتروني
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(reviewer_email)) {
-        return res.status(400).json({ error: 'البريد الإلكتروني غير صحيح' });
-      }
-
-      console.log('📝 Adding review for product:', productId);
-
-      const payload = {
-        product_id: parseInt(productId),
-        review: review.trim(),
-        reviewer: reviewer.trim(),
-        reviewer_email: reviewer_email.trim(),
-        rating: parseInt(rating),
-      };
-
-      console.log('📊 Payload:', payload);
-
-      const url = `https://cms.taplinksa.com/wp-json/wc/v3/products/${productId}/reviews?consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/reviews`,
+        {
+          product_id: parseInt(productId),
+          review: review,
+          reviewer: reviewer || 'عميل',
+          reviewer_email: userEmail,
+          rating: parseInt(rating),
         },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      console.log('📊 Response Status:', response.status);
-      console.log('📊 Response Data:', data);
-
-      if (!response.ok) {
-        console.error('❌ API Error:', response.status, data);
-        
-        if (response.status === 401 || response.status === 403) {
-          return res.status(403).json({ error: 'ليس لديك صلاحية لإضافة تقييم - تحقق من المفاتيح' });
+        {
+          auth: {
+            username: process.env.WC_CONSUMER_KEY,
+            password: process.env.WC_CONSUMER_SECRET,
+          },
         }
+      );
 
-        return res.status(response.status).json({
-          error: data.message || 'فشل إضافة التقييم',
-          code: data.code,
-          details: data,
-        });
-      }
+      console.log('✅ Review created with ID:', response.data?.id);
 
-      console.log('✅ Review added successfully:', data.id);
-      res.status(201).json({
+      res.status(200).json({
         success: true,
-        review: data,
+        review: response.data,
       });
     } catch (error) {
-      console.error('❌ Error creating review:', error.message);
+      console.error(
+        'Error creating review:',
+        error.response?.data || error.message
+      );
+
+      if (error.response?.data?.code === 'woocommerce_rest_comment_exists') {
+        return res
+          .status(400)
+          .json({ error: 'لقد قمت بتقييم هذا المنتج من قبل' });
+      }
+
       res.status(500).json({
         error: 'فشل إضافة التقييم',
-        details: error.message,
+        details: error.response?.data?.message,
       });
     }
   } else {
