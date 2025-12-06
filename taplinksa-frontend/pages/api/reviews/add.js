@@ -1,68 +1,113 @@
-// pages/api/reviews/add.js
+// pages/api/reviews/[productId].js - Working Version
 
-import { addProductReview } from '../../../lib/woocommerce';
+import axios from 'axios';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  const { productId } = req.query;
+
+  if (!productId) {
+    return res.status(400).json({ error: 'Product ID is required' });
   }
 
-  try {
-    const { productId, name, email, title, comment, rating } = req.body;
+  // GET - جلب التقييمات
+  if (req.method === 'GET') {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
+        {
+          params: {
+            per_page: 100,
+          },
+          auth: {
+            username: process.env.WC_CONSUMER_KEY,
+            password: process.env.WC_CONSUMER_SECRET,
+          },
+        }
+      );
 
-    // Validate required fields
-    if (!productId || !name || !email || !title || !comment || !rating) {
-      return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
+      res.status(200).json(response.data);
+    } catch (error) {
+      console.error('Error fetching reviews:', error.response?.data || error.message);
+      res.status(500).json({ error: 'Failed to fetch reviews' });
     }
+  }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'البريد الإلكتروني غير صحيح' });
-    }
+  // POST - إضافة تقييم جديد
+  else if (req.method === 'POST') {
+    try {
+      const { rating, review, reviewer, reviewer_email } = req.body;
 
-    // Validate rating
-    if (rating < 1 || rating > 5) {
-      return res.status(400).json({ error: 'التقييم يجب أن يكون بين 1 و 5' });
-    }
+      // التحقق من البيانات المطلوبة
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: 'التقييم يجب أن يكون بين 1 و 5' });
+      }
 
-    // Build auth header for WooCommerce
-    const WC_CONSUMER_KEY = process.env.WC_CONSUMER_KEY;
-    const WC_CONSUMER_SECRET = process.env.WC_CONSUMER_SECRET;
+      if (!review || review.trim().length < 10) {
+        return res.status(400).json({ error: 'التقييم يجب أن يكون 10 أحرف على الأقل' });
+      }
 
-    if (!WC_CONSUMER_KEY || !WC_CONSUMER_SECRET) {
-      console.error('Missing WooCommerce credentials');
-      return res.status(500).json({ error: 'خطأ في الخادم' });
-    }
+      if (!reviewer || reviewer.trim().length === 0) {
+        return res.status(400).json({ error: 'الاسم مطلوب' });
+      }
 
-    const auth = Buffer.from(`${WC_CONSUMER_KEY}:${WC_CONSUMER_SECRET}`).toString('base64');
-    const headers = {
-      Authorization: `Basic ${auth}`,
-      'Content-Type': 'application/json',
-    };
+      if (!reviewer_email || reviewer_email.trim().length === 0) {
+        return res.status(400).json({ error: 'البريد الإلكتروني مطلوب' });
+      }
 
-    // Add review using WooCommerce API
-    const result = await addProductReview(
-      productId,
-      { name, email, title, comment, rating },
-      headers
-    );
+      // التحقق من صيغة البريد الإلكتروني
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(reviewer_email)) {
+        return res.status(400).json({ error: 'البريد الإلكتروني غير صحيح' });
+      }
 
-    if (!result.success) {
-      return res.status(400).json({ 
-        error: result.error || 'فشل إضافة التقييم' 
+      console.log('📝 Adding review for product:', productId);
+      console.log('📊 Review data:', { rating, reviewer, reviewer_email });
+
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_WC_API_URL}/products/${productId}/reviews`,
+        {
+          product_id: parseInt(productId),
+          review: review.trim(),
+          reviewer: reviewer.trim(),
+          reviewer_email: reviewer_email.trim(),
+          rating: parseInt(rating),
+        },
+        {
+          auth: {
+            username: process.env.WC_CONSUMER_KEY,
+            password: process.env.WC_CONSUMER_SECRET,
+          },
+        }
+      );
+
+      console.log('✅ Review added successfully:', response.data.id);
+
+      res.status(201).json({
+        success: true,
+        review: response.data,
+      });
+    } catch (error) {
+      console.error('Error creating review:', error.response?.status, error.response?.data || error.message);
+
+      // معالجة الأخطاء المختلفة
+      if (error.response?.status === 404) {
+        return res.status(404).json({ error: 'المنتج غير موجود' });
+      }
+
+      if (error.response?.data?.code === 'woocommerce_rest_comment_exists') {
+        return res.status(400).json({ error: 'لقد قمت بتقييم هذا المنتج من قبل' });
+      }
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return res.status(403).json({ error: 'ليس لديك صلاحية لإضافة تقييم' });
+      }
+
+      res.status(500).json({
+        error: 'فشل إضافة التقييم',
+        details: error.response?.data?.message || error.message,
       });
     }
-
-    return res.status(201).json({
-      success: true,
-      message: 'تم إضافة التقييم بنجاح',
-      review: result.review,
-    });
-  } catch (error) {
-    console.error('Error in add review API:', error);
-    return res.status(500).json({ 
-      error: 'خطأ في الخادم: ' + error.message 
-    });
+  } else {
+    res.status(405).json({ error: 'Method not allowed' });
   }
 }
