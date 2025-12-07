@@ -28,11 +28,10 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <UserProvider>
-      <PayPalScriptProvider options={paypalOptions}>
         <CartProvider>
           <Component {...pageProps} />
         </CartProvider>
-      </PayPalScriptProvider>
+      
     </UserProvider>
   );
 }
