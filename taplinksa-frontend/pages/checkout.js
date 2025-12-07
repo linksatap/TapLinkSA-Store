@@ -13,10 +13,12 @@ export default function Checkout() {
   const router = useRouter();
   const { cart, getCartTotal, clearCart } = useCart();
   const { user } = useUser();
+
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [shippingInfo, setShippingInfo] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -28,6 +30,7 @@ export default function Checkout() {
     notes: '',
   });
 
+  // تعبئة بيانات المستخدم عند تسجيل الدخول
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -38,7 +41,7 @@ export default function Checkout() {
     }
   }, [user]);
 
-  // حساب الشحن عند تغيير الرمز البريدي فقط
+  // حساب الشحن عند تغيير الرمز البريدي
   useEffect(() => {
     if (formData.postcode && cart.length > 0) {
       calculateShipping();
@@ -48,16 +51,18 @@ export default function Checkout() {
   const subtotal = getCartTotal();
   const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
   const shippingCost = shippingInfo ? shippingInfo.cost : 0;
- // const tax = (subtotal - discount + shippingCost) * 0.15;
-  const finalTotal = subtotal - discount + shippingCost ;// + tax
-  
+
+  const finalTotal = subtotal - discount + shippingCost;
+
   const SAR_TO_USD = 0.2667;
   const finalTotalUSD = (finalTotal * SAR_TO_USD).toFixed(2);
 
+  // تطبيق الكوبون
   const handleApplyCoupon = (coupon) => {
     setAppliedCoupon(coupon);
   };
 
+  // حساب الشحن
   const calculateShipping = async () => {
     if (!formData.postcode) {
       setShippingInfo(null);
@@ -74,18 +79,16 @@ export default function Checkout() {
 
       const response = await fetch('/api/shipping/calculate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           postcode: formData.postcode,
           items,
-          subtotal 
+          subtotal
         }),
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         setShippingInfo(data.shipping);
       } else {
@@ -97,6 +100,7 @@ export default function Checkout() {
     }
   };
 
+  // إرسال الطلب لووكميرس
   const sendOrderToWooCommerce = async (orderData) => {
     try {
       const response = await fetch('/api/create-order', {
@@ -105,21 +109,19 @@ export default function Checkout() {
           'Content-Type': 'application/json',
           'Authorization': user ? `Bearer ${localStorage.getItem('token')}` : '',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           orderData: {
             ...orderData,
             customer_id: user?.id || 0,
-            coupon_lines: appliedCoupon ? [
-              {
-                code: appliedCoupon.code,
-              }
-            ] : [],
+            coupon_lines: appliedCoupon
+              ? [{ code: appliedCoupon.code }]
+              : [],
           }
         }),
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         console.log('Order created in WooCommerce:', result.orderId);
         return result;
@@ -133,23 +135,7 @@ export default function Checkout() {
     }
   };
 
-  if (cart.length === 0) {
-    return (
-      <Layout title="الدفع | تاب لينك السعودية">
-        <div className="container-custom section-padding">
-          <div className="text-center py-20">
-            <div className="text-8xl mb-6">🛒</div>
-            <h1 className="text-4xl font-bold mb-4">السلة فارغة</h1>
-            <p className="text-gray-600 mb-8">أضف منتجات للسلة أولاً لإتمام الطلب</p>
-            <Link href="/shop" className="btn-primary">
-              تصفح المنتجات
-            </Link>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
+  // تغيير بيانات الفورم
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -157,6 +143,7 @@ export default function Checkout() {
     });
   };
 
+  // إنشاء طلب PayPal
   const createOrder = (data, actions) => {
     return actions.order.create({
       purchase_units: [
@@ -174,12 +161,13 @@ export default function Checkout() {
     });
   };
 
+  // عند الموافقة على الدفع PayPal
   const onApprove = async (data, actions) => {
     setLoading(true);
-    
+
     try {
       const details = await actions.order.capture();
-      
+
       const orderData = {
         name: formData.name || `${details.payer.name.given_name} ${details.payer.name.surname}`,
         email: formData.email || details.payer.email_address,
@@ -198,13 +186,13 @@ export default function Checkout() {
       };
 
       const result = await sendOrderToWooCommerce(orderData);
-      
+
       clearCart();
-      
+
       if (result) {
         router.push(`/thank-you?payment=paypal&order_id=${result.orderId}&order_number=${result.orderNumber}`);
       } else {
-        router.push('/thank-you?payment=paypal&order_id=' + details.id);
+        router.push(`/thank-you?payment=paypal&order_id=${details.id}`);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -214,71 +202,17 @@ export default function Checkout() {
     }
   };
 
+  // عند حدوث خطأ PayPal
   const onError = (err) => {
     console.error('PayPal Error:', err);
     alert('حدث خطأ في الدفع عبر PayPal. يرجى المحاولة مرة أخرى.');
   };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (paymentMethod === 'paypal') {
-      alert('يرجى استخدام زر PayPal أدناه لإتمام الدفع');
-      return;
-    }
-    
-    setLoading(true);
-
-    if (!formData.name || !formData.phone || !formData.email || !formData.state || !formData.city || !formData.postcode || !formData.address) {
-      alert('يرجى ملء جميع الحقول المطلوبة (بما في ذلك الرمز البريدي)');
-      setLoading(false);
-      return;
-    }
-
-    // التحقق من صحة الرمز البريدي
-    if (formData.postcode.length !== 5 || !/^\d+$/.test(formData.postcode)) {
-      alert('الرمز البريدي يجب أن يكون 5 أرقام فقط');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const orderData = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        state: formData.state,
-        city: formData.city,
-        postcode: formData.postcode,
-        address: formData.address,
-        notes: formData.notes,
-        paymentMethod: paymentMethod,
-        paid: false,
-        items: cart,
-        customer_id: user?.id || 0,
-        coupon_code: appliedCoupon?.code || '',
-      };
-
-      const result = await sendOrderToWooCommerce(orderData);
-
-      clearCart();
-      
-      if (result) {
-        router.push(`/thank-you?order_id=${result.orderId}&order_number=${result.orderNumber}`);
-      } else {
-        router.push('/thank-you');
-      }
-    } catch (error) {
-      alert('حدث خطأ أثناء إنشاء الطلب');
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // بدء واجهة المستخدم
   return (
     <Layout title="إتمام الطلب | تاب لينك السعودية">
       <div className="container-custom section-padding">
+
+        {/* المسار العلوي */}
         <nav className="mb-8 text-sm">
           <ol className="flex items-center gap-2">
             <li><Link href="/" className="text-gray-600 hover:text-gold">الرئيسية</Link></li>
@@ -291,13 +225,16 @@ export default function Checkout() {
           </ol>
         </nav>
 
+        {/* العنوان */}
         <div className="text-center mb-12">
           <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4">
-إتمام الطلب</h1>
+            إتمام الطلب
+          </h1>
           <div className="w-24 h-1 bg-gold mx-auto"></div>
         </div>
 
-        {user && (
+        {/* رسالة تسجيل الدخول */}
+        {user ? (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -307,9 +244,7 @@ export default function Checkout() {
               ✅ مرحباً <strong>{user.name}</strong>! بياناتك محفوظة وسيتم ربط الطلب بحسابك تلقائياً.
             </p>
           </motion.div>
-        )}
-
-        {!user && (
+        ) : (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -325,18 +260,24 @@ export default function Checkout() {
           </motion.div>
         )}
 
-<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        {/* بداية تخطيط الصفحة */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+
+          {/* العمود الأيسر – بيانات العميل */}
           <div className="lg:col-span-2 space-y-6">
-            
+
+            {/* نموذج البيانات */}
             <motion.form
               onSubmit={handleSubmit}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
+              className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
             >
               <h2 className="text-2xl font-bold mb-6">بيانات التوصيل</h2>
 
               <div className="space-y-4 mb-8">
+
+                {/* الاسم */}
                 <div>
                   <label className="block text-sm font-medium mb-2">الاسم الكامل *</label>
                   <input
@@ -350,6 +291,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                   />
                 </div>
 
+                {/* الهاتف + البريد */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">رقم الجوال *</label>
@@ -373,15 +315,16 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                       onChange={handleChange}
                       required
                       disabled={!!user}
-                      className={`w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all ${
-                        user ? 'bg-gray-100 cursor-not-allowed' : ''
-                      }`}
+                      className={`w-full px-4 py-3 rounded-lg border border-gray-300 
+                        focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all 
+                        ${user ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       placeholder="example@email.com"
                     />
                   </div>
                 </div>
 
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* المنطقة + المدينة + الرمز البريدي */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">المنطقة *</label>
                     <input
@@ -390,7 +333,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                       value={formData.state}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
                       placeholder="مثال: القصيم"
                     />
                   </div>
@@ -403,16 +346,18 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                       value={formData.city}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300"
                       placeholder="مثال: بريدة"
                     />
                   </div>
 
+                  {/* الرمز البريدي */}
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      الرمز البريدي * 
+                      الرمز البريدي *
                       <span className="text-red-500 text-xs mr-1">(إلزامي)</span>
                     </label>
+
                     <input
                       type="text"
                       name="postcode"
@@ -421,16 +366,17 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                       required
                       maxLength="5"
                       pattern="[0-9]{5}"
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gold focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all font-mono text-lg"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gold 
+                        focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none 
+                        font-mono text-lg"
                       placeholder="51431"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      5 أرقام فقط - مطلوب لحساب الشحن
-                    </p>
+
+                    <p className="text-xs text-gray-500 mt-1">5 أرقام فقط - مطلوب لحساب الشحن</p>
                   </div>
                 </div>
 
-                {/* رسالة تحذير إذا لم يُدخل الرمز */}
+                {/* إذا ما دخل الرمز البريدي */}
                 {!formData.postcode && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -438,32 +384,33 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                     className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4"
                   >
                     <p className="text-sm text-yellow-800">
-                      ⚠️ <strong>الرمز البريدي مطلوب</strong> لحساب تكلفة الشحن بدقة
+                      ⚠️ <strong>الرمز البريدي مطلوب</strong> لحساب تكلفة الشحن
                     </p>
                   </motion.div>
                 )}
 
+                {/* العنوان */}
                 <div>
                   <label className="block text-sm font-medium mb-2">العنوان التفصيلي *</label>
                   <textarea
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
-                    required
                     rows="3"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all resize-none"
+                    required
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 resize-none"
                     placeholder="الحي، الشارع، رقم المبنى..."
                   ></textarea>
                 </div>
 
-                {/* عرض معلومات الشحن */}
+                {/* معلومات الشحن */}
                 {shippingInfo && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     className={`rounded-lg p-4 border-2 ${
-                      shippingInfo.cost === 0 
-                        ? 'bg-green-50 border-green-300' 
+                      shippingInfo.cost === 0
+                        ? 'bg-green-50 border-green-300'
                         : 'bg-blue-50 border-blue-300'
                     }`}
                   >
@@ -476,6 +423,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                           الرمز البريدي: {formData.postcode} • {shippingInfo.deliveryTime || 'توصيل سريع'}
                         </p>
                       </div>
+
                       <div className="text-left">
                         {shippingInfo.cost === 0 ? (
                           <span className="text-2xl font-bold text-green-600">مجاني</span>
@@ -486,6 +434,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                         )}
                       </div>
                     </div>
+
                     {shippingInfo.reason && (
                       <div className="bg-green-100 rounded-lg p-2 mt-3">
                         <p className="text-sm text-green-800">
@@ -496,24 +445,30 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                   </motion.div>
                 )}
 
+                {/* ملاحظات إضافية */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">ملاحظات إضافية (اختياري)</label>
+                  <label className="block text-sm font-medium mb-2">ملاحظات إضافية</label>
                   <textarea
                     name="notes"
                     value={formData.notes}
                     onChange={handleChange}
                     rows="3"
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-gold focus:ring-2 focus:ring-gold/20 outline-none transition-all resize-none"
-                    placeholder="أي ملاحظات أو تعليمات خاصة بالتوصيل..."
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 resize-none"
+                    placeholder="أي ملاحظات تخص التوصيل..."
                   ></textarea>
                 </div>
               </div>
 
+              {/* اختيار طريقة الدفع */}
               <h2 className="text-2xl font-bold mb-6">طريقة الدفع</h2>
-              
+
               <div className="space-y-4 mb-8">
+
+                {/* الدفع عند الاستلام */}
                 <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  paymentMethod === 'cod' ? 'border-gold bg-gold/5' : 'border-gray-300 hover:border-gold/50'
+                  paymentMethod === 'cod'
+                    ? 'border-gold bg-gold/5'
+                    : 'border-gray-300 hover:border-gold/50'
                 }`}>
                   <input
                     type="radio"
@@ -521,7 +476,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                     value="cod"
                     checked={paymentMethod === 'cod'}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-gold"
+                    className="w-5 h-5"
                   />
                   <div>
                     <div className="font-bold">الدفع عند الاستلام</div>
@@ -529,8 +484,11 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                   </div>
                 </label>
 
+                {/* PayPal */}
                 <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  paymentMethod === 'paypal' ? 'border-gold bg-gold/5' : 'border-gray-300 hover:border-gold/50'
+                  paymentMethod === 'paypal'
+                    ? 'border-gold bg-gold/5'
+                    : 'border-gray-300 hover:border-gold/50'
                 }`}>
                   <input
                     type="radio"
@@ -538,7 +496,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                     value="paypal"
                     checked={paymentMethod === 'paypal'}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-gold"
+                    className="w-5 h-5"
                   />
                   <div>
                     <div className="font-bold">PayPal</div>
@@ -546,8 +504,11 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                   </div>
                 </label>
 
+                {/* تحويل بنكي */}
                 <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  paymentMethod === 'bank' ? 'border-gold bg-gold/5' : 'border-gray-300 hover:border-gold/50'
+                  paymentMethod === 'bank'
+                    ? 'border-gold bg-gold/5'
+                    : 'border-gray-300 hover:border-gold/50'
                 }`}>
                   <input
                     type="radio"
@@ -555,12 +516,12 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                     value="bank"
                     checked={paymentMethod === 'bank'}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-gold"
+                    className="w-5 h-5"
                   />
                   <div className="flex-grow">
                     <div className="font-bold">تحويل بنكي</div>
                     <div className="text-sm text-gray-600">حوّل المبلغ لحسابنا البنكي</div>
-                    
+
                     {paymentMethod === 'bank' && (
                       <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
                         <div className="font-medium mb-2">معلومات الحساب البنكي:</div>
@@ -573,6 +534,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                 </label>
               </div>
 
+              {/* ملاحظة PayPal */}
               {paymentMethod === 'paypal' && (
                 <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-800 mb-2">
@@ -583,7 +545,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
                   </p>
                 </div>
               )}
-
+              {/* زر الدفع — PayPal */}
               {paymentMethod === 'paypal' ? (
                 <div className="mt-6">
                   <PayPalButtons
@@ -609,24 +571,27 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 md:p-8"
               )}
             </motion.form>
 
+            {/* إدخال الكوبون */}
             <CouponInput 
               onApplyCoupon={handleApplyCoupon} 
               subtotal={subtotal}
             />
           </div>
 
+          {/* العمود الأيمن — ملخص الطلب */}
           <div className="lg:col-span-1">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24"
+              className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24"
             >
               <h2 className="text-2xl font-bold mb-6">ملخص الطلب</h2>
 
+              {/* المنتجات */}
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
                 {cart.map((item) => (
                   <div key={item.id} className="flex gap-3 pb-3 border-b">
-<div className="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0">
+                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0">
                       <Image
                         src={item.images?.[0]?.src || '/placeholder-product.jpg'}
                         alt={item.name}
@@ -634,10 +599,12 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24"
                         className="object-cover rounded"
                       />
                     </div>
+
                     <div className="text-gray-600 flex-grow">
                       <div className="font-medium line-clamp-1 text-sm">{item.name}</div>
                       <div className="text-sm">الكمية: {item.quantity}</div>
                     </div>
+
                     <div className="font-bold text-gold whitespace-nowrap text-sm">
                       {(parseFloat(item.price) * item.quantity).toFixed(2)} ر.س
                     </div>
@@ -645,21 +612,24 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24"
                 ))}
               </div>
 
+              {/* الأسعار */}
               <div className="space-y-3 mb-6">
+
                 <div className="flex justify-between text-gray-600">
                   <span>المجموع الفرعي</span>
                   <span className="font-bold">{subtotal.toFixed(2)} ر.س</span>
                 </div>
-                
+
                 {appliedCoupon && (
                   <div className="flex justify-between text-green-600">
                     <span>الخصم ({appliedCoupon.code})</span>
                     <span className="font-bold">-{discount.toFixed(2)} ر.س</span>
                   </div>
                 )}
-                
+
                 <div className="flex justify-between text-gray-600">
                   <span>الشحن</span>
+
                   {shippingInfo ? (
                     shippingInfo.cost === 0 ? (
                       <span className="font-bold text-green-600">مجاني 🎉</span>
@@ -673,17 +643,12 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24"
                     </div>
                   )}
                 </div>
-                {/*
-                <div className="flex justify-between text-gray-600">
-                  <span>الضريبة (15%)</span>
-                  <span className="font-bold">{tax.toFixed(2)} ر.س</span>
-                </div>
-                */}
+
                 <div className="border-t pt-3 flex justify-between text-xl font-bold">
                   <span>المجموع الكلي</span>
                   <span className="text-gold">{finalTotal.toFixed(2)} ر.س</span>
                 </div>
-                
+
                 {appliedCoupon && discount > 0 && (
                   <div className="bg-green-50 p-3 rounded-lg">
                     <p className="text-sm text-green-700 font-bold text-center">
@@ -691,7 +656,7 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24"
                     </p>
                   </div>
                 )}
-                
+
                 {paymentMethod === 'paypal' && (
                   <div className="text-sm text-gray-500 text-center">
                     ≈ ${finalTotalUSD} USD
@@ -699,31 +664,36 @@ className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-24"
                 )}
               </div>
 
+              {/* ملاحظة تحت */}
               <div className="bg-gold/10 p-4 rounded-lg mb-6">
                 <p className="text-sm text-gray-700">
-                  {paymentMethod === 'paypal' 
+                  {paymentMethod === 'paypal'
                     ? 'بعد الدفع عبر PayPal سيتم إرسال تفاصيل الطلب عبر واتساب'
-                    : 'وسائل الدفع الاخري م زالت تحت التطوير و الدمج '
-                  }
+                    : 'وسائل الدفع الأخرى ما زالت تحت التطوير والدمج'}
                 </p>
               </div>
 
+              {/* عناصر الثقة */}
               <div className="space-y-3 text-sm text-gray-600">
                 <div className="flex items-start gap-2">
                   <span className="text-green-500">✓</span>
                   <span>دفع آمن ومضمون</span>
                 </div>
+
                 <div className="flex items-start gap-2">
                   <span className="text-green-500">✓</span>
                   <span>إمكانية الإرجاع خلال 14 يوم</span>
                 </div>
+
                 <div className="flex items-start gap-2">
                   <span className="text-green-500">✓</span>
                   <span>دعم فني متاح 24/7</span>
                 </div>
               </div>
+
             </motion.div>
           </div>
+
         </div>
       </div>
     </Layout>
