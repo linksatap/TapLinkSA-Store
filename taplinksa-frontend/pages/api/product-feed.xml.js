@@ -42,30 +42,7 @@ async function fetchProducts() {
   }
 }
 
-function getDemoProducts() {
-  return [
-    {
-      id: 1,
-      name: "بطاقة NFC بيضاء فاخرة",
-      slug: "white-nfc-card",
-      permalink: "https://taplinksa.com/shop/white-nfc-card",
-      price: "299",
-      stock_status: "instock",
-      virtual: false, // ✅ منتج فيزيائي
-      images: [{ src: "https://cms.taplinksa.com/wp-content/uploads/nfc-white.jpg" }]
-    },
-    {
-      id: 2,
-      name: "اشتراك نيتفلكس شهري",
-      slug: "netflix-subscription",
-      permalink: "https://taplinksa.com/shop/netflix-subscription",
-      price: "49",
-      stock_status: "instock",
-      virtual: true, // ✅ منتج رقمي
-      images: [{ src: "https://cms.taplinksa.com/wp-content/uploads/netflix.jpg" }]
-    }
-  ];
-}
+
 
 function buildFeed(products) {
   const siteUrl = "https://taplinksa.com";

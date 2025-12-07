@@ -4,7 +4,7 @@ import 'aos/dist/aos.css';
 import '../styles/globals.css';
 import { CartProvider } from '../context/CartContext';
 import { UserProvider } from '../context/UserContext';
-//import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
   import { SpeedInsights } from "@vercel/speed-insights/next"
 
 function MyApp({ Component, pageProps }) {
@@ -22,11 +22,11 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <UserProvider>
-      
+      <PayPalScriptProvider options={paypalOptions}>
         <CartProvider>
           <Component {...pageProps} />
         </CartProvider>
-      
+      </PayPalScriptProvider>
     </UserProvider>
   );
 }
