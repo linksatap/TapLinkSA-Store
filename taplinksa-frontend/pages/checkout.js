@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import Layout from '../components/layout/Layout';
 import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
@@ -9,9 +10,9 @@ import CheckoutSummary from '../components/checkout/CheckoutSummary';
 import CouponInput from '../components/CouponInput';
 
 export default function Checkout() {
+  const router = useRouter();
   const { cart, getCartTotal, clearCart } = useCart();
   const { user } = useUser();
-  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
@@ -246,6 +247,7 @@ export default function Checkout() {
               finalTotal={finalTotal}
               finalTotalUSD={finalTotalUSD}
               user={user}
+              cart={cart}
             />
 
             {/* إدخال الكوبون */}
