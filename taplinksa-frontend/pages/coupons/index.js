@@ -154,6 +154,8 @@ export default function CouponsPage({ initialCoupons }) {
     <Layout
       title="عروض وكوبونات حصرية - تاب لينك"
       description="احصل على أفضل الخصومات والكوبونات من شركائنا"
+      keywords="اشتراكات رقمية, ChatGPT اشتراك, Canva Pro,نيتفليكس,Netflix, Midjourney اشتراك, سورسات تيليجرام, اشتراكات رسمية, بريدة, القصيم, تاب لينك"
+      ogImage="/images/subscriptions-og.jpg"
     >
       <div className="container-custom section-padding">
         {/* Header */}
