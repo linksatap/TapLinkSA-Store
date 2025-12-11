@@ -26,7 +26,7 @@ export default function StickyAddToCart({ show, product, price, onAddToCart, onB
               {/* Product Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold truncate">{product.name}</p>
-                <p className="text-lg font-bold text-gold">{price.toFixed(2)} ر.س</p>
+                <p className="text-lg font-bold text-gold">{price.toFixed(2)} ⃁</p>
               </div>
 
               {/* Actions */}
