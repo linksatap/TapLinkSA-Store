@@ -43,7 +43,7 @@ export default function Layout({
         <meta property="og:description" content={description} />
         <meta property="og:image" content={ogImage.startsWith('http' ) ? ogImage : `${siteUrl}${ogImage}`} />
         <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:site_name" content="TapLink SA" />
+        <meta property="og:site_name" content="متجر تاب لينك" />
         
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
