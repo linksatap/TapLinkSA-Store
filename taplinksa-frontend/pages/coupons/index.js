@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Layout from '../../components/layout/Layout';
+ import CouponSchema from '@/components/seo/CouponSchema';
 import { motion } from 'framer-motion';
 import {
   FiCopy,
