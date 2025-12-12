@@ -107,16 +107,16 @@ export default function ProductCard({ product }) {
             {/* Price Section */}
             <div className="mb-4 py-4 border-t border-b border-gray-200">
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-bold text-gold">{price} ر.س</span>
+                <span className="text-3xl font-bold text-gold">{price} ⃁</span>
                 {hasDiscount && (
                   <span className="text-lg text-gray-400 line-through">
-                    {regularPrice} ر.س
+                    {regularPrice} ⃁
                   </span>
                 )}
               </div>
               {hasDiscount && (
                 <p className="text-green-600 text-sm font-semibold">
-                  وفر {(regularPrice - price).toFixed(2)} ر.س
+                  وفر {(regularPrice - price).toFixed(2)} ⃁
                 </p>
               )}
             </div>
