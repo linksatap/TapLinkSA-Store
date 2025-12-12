@@ -288,11 +288,11 @@ export default function ProductPage({ product: initialProduct, variations: initi
                               </p>
                               <div className="flex gap-2 mt-1">
                                 <span className="text-gold font-bold">
-                                  {varPrice.toFixed(2)} ر.س
+                                  {varPrice.toFixed(2)}⃁
                                 </span>
                                 {varDiscount > 0 && (
                                   <span className="text-sm text-gray-500 line-through">
-                                    {varRegularPrice.toFixed(2)} ر.س
+                                    {varRegularPrice.toFixed(2)}⃁
                                   </span>
                                 )}
                               </div>
