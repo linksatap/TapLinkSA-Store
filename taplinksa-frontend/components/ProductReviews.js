@@ -72,7 +72,6 @@ export default function ProductReviews({ productId }) {
       setFormData({ rating: 5, review: '', reviewer: '' });
       setShowForm(false);
       
-      // تحديث التقييمات
       setTimeout(() => {
         fetchReviews();
         setSuccess('');
@@ -82,6 +81,56 @@ export default function ProductReviews({ productId }) {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // ✅ دالة لتوليد Avatar من أول حرف
+  const getInitials = (name) => {
+    if (!name) return '👤';
+    const words = name.trim().split(' ');
+    if (words.length >= 2) {
+      return words[0][0] + words[1][0];
+    }
+    return name[0].toUpperCase();
+  };
+
+  // ✅ دالة لتوليد لون عشوائي ثابت من الاسم
+  const getAvatarColor = (name) => {
+    const colors = [
+      'bg-blue-500',
+      'bg-green-500',
+      'bg-purple-500',
+      'bg-pink-500',
+      'bg-indigo-500',
+      'bg-red-500',
+      'bg-yellow-500',
+      'bg-teal-500',
+    ];
+    
+    if (!name) return 'bg-gray-400';
+    
+    // استخدم hash من الاسم لاختيار لون ثابت
+    const hash = name.split('').reduce((acc, char) => {
+      return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+    
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  // ✅ Avatar Component
+  const Avatar = ({ name, size = 'md', className = '' }) => {
+    const sizes = {
+      sm: 'w-8 h-8 text-xs',
+      md: 'w-12 h-12 text-lg',
+      lg: 'w-16 h-16 text-2xl',
+    };
+
+    return (
+      <div
+        className={`${sizes[size]} ${getAvatarColor(name)} rounded-full flex items-center justify-center text-white font-bold shadow-lg ${className}`}
+      >
+        {getInitials(name)}
+      </div>
+    );
   };
 
   const renderStars = (rating, size = 'text-xl') => {
@@ -227,19 +276,35 @@ export default function ProductReviews({ productId }) {
               key={review.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-6 bg-gray-50 rounded-xl"
+              className="p-6 bg-gray-50 rounded-xl hover:shadow-md transition-shadow"
             >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h4 className="font-bold text-dark">{review.reviewer}</h4>
-                  <p className="text-sm text-gray-500">
-                    {new Date(review.date_created).toLocaleDateString('ar-SA')}
-                  </p>
+              {/* ✅ Header مع Avatar */}
+              <div className="flex items-start gap-4 mb-4">
+                {/* Avatar */}
+                <Avatar name={review.reviewer} size="md" />
+                
+                {/* معلومات المستخدم */}
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-dark text-lg">{review.reviewer}</h4>
+                      <p className="text-sm text-gray-500">
+                        {new Date(review.date_created).toLocaleDateString('ar-SA', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    {/* النجوم */}
+                    {renderStars(review.rating, 'text-lg')}
+                  </div>
                 </div>
-                {renderStars(review.rating, 'text-lg')}
               </div>
+
+              {/* نص التقييم */}
               <div
-                className="text-gray-700"
+                className="text-gray-700 leading-relaxed mr-16"
                 dangerouslySetInnerHTML={{ __html: review.review }}
               />
             </motion.div>
