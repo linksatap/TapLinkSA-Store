@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useUser } from '../../context/UserContext';
+import { useUser } from '../context/UserContext';
 
 export default function ProductReviews({ productId }) {
   const [reviews, setReviews] = useState([]);

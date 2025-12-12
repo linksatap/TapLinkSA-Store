@@ -91,8 +91,8 @@ export default function Shop({ initialProducts, initialTotal, initialTotalPages,
 
   return (
     <Layout
-      title="المتجر - اشتراكات رقمية"
-      description="تصفح مجموعة واسعة من الاشتراكات والخدمات الرقمية"
+      title="المتجر - تاب لينك"
+      description="تصفح مجموعة واسعة من المنتجات والخدمات الرقمية"
     >
       <div className="container-custom section-padding">
         {/* Digital Subscriptions Banner */}
