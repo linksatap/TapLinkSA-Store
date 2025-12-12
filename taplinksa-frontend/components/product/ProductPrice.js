@@ -14,11 +14,11 @@ export default function ProductPrice({
           <span className="text-3xl md:text-4xl lg:text-5xl font-bold text-gold">
             {price.toFixed(2)}
           </span>
-          <span className="text-sm md:text-base font-semibold text-gold">ر.س</span>
+          <span className="text-sm md:text-base font-semibold text-gold">⃁</span>
         </div>
         {isOnSale && (
           <span className="text-base md:text-lg text-gray-400 line-through">
-            {regularPrice.toFixed(2)} ر.س
+            {regularPrice.toFixed(2)}⃁
           </span>
         )}
       </div>
@@ -27,7 +27,7 @@ export default function ProductPrice({
       {isOnSale && (
         <div className="bg-green-50 border-l-4 border-green-500 rounded px-3 py-2 mb-4">
           <p className="text-sm md:text-base text-green-700 font-semibold">
-            💰 وفّر <span className="font-bold text-lg">{(regularPrice - price).toFixed(2)}</span> ر.س (
+            💰 وفّر <span className="font-bold text-lg">{(regularPrice - price).toFixed(2)}</span>⃁ (
             <span className="font-bold">{discountPercentage}%</span> خصم)
           </p>
         </div>
