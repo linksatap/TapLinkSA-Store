@@ -25,26 +25,27 @@ export default function Footer() {
       { name: 'من نحن', href: '/about' },
       { name: 'المتجر', href: '/shop' },
       { name: 'المدونة', href: '/blog' },
+      { name: 'اتصل بنا', href: '/contact' } // ✅ إضافة
     ],
     legal: [
-      { name: 'سياسة الخصوصية', href: '/privacy' },
+      { name: 'سياسة الخصوصية', href: '/privacy-policy' },
       { name: 'شروط الاستخدام', href: '/terms' },
-      { name: 'سياسة الاسترجاع', href: '/refund' }
+      { name: 'سياسة الشحن', href: '/shipping-policy', icon: '🚚' }, // ✅ جديد
+      { name: 'سياسة الاسترجاع', href: '/return-policy', icon: '↩️' }, // ✅ محسّن
+      { name: 'الأسئلة الشائعة', href: '/faq', icon: '❓' } // ✅ إضافة
     ]
   };
 
   const socialLinks = [
     { name: 'WhatsApp', icon: '📱', href: 'https://wa.me/966507004339', color: 'hover:bg-green-500' },
-    { name: 'Instagram', icon: '📷', href: '#', color: 'hover:bg-pink-500' },
-    { name: 'Twitter', icon: '🐦', href: '#', color: 'hover:bg-blue-400' },
-    { name: 'TikTok', icon: '🎵', href: '#', color: 'hover:bg-black' },
-    { name: 'Snapchat', icon: '👻', href: '#', color: 'hover:bg-yellow-400' }
+    { name: 'Instagram', icon: '📷', href: 'https://instagram.com/taplinksa', color: 'hover:bg-pink-500' },
+    { name: 'Twitter', icon: '🐦', href: 'https://twitter.com/taplinksa', color: 'hover:bg-blue-400' },
+    { name: 'TikTok', icon: '🎵', href: 'https://tiktok.com/@taplinksa', color: 'hover:bg-black' },
+    { name: 'Snapchat', icon: '👻', href: 'https://snapchat.com/add/taplinksa', color: 'hover:bg-yellow-400' }
   ];
 
   return (
     <footer className="relative">
-      {/* CTA Section */}
-      
       {/* Main Footer */}
       <div className="bg-dark text-white pt-16 pb-8">
         <div className="container-custom">
@@ -140,13 +141,13 @@ export default function Footer() {
               
               <div className="space-y-4 mb-6">
                 <a
-                  href="tel:+966123456789"
+                  href="tel:+966507004339"
                   className="flex items-center gap-3 text-gray-400 hover:text-gold transition-colors group"
                 >
                   <span className="w-10 h-10 bg-gold/20 rounded-lg flex items-center justify-center text-gold group-hover:bg-gold group-hover:text-dark transition-all">
                     📞
                   </span>
-                  <span className="font-medium">+966 5007004339</span>
+                  <span className="font-medium">+966 507004339</span>
                 </a>
 
                 <a
@@ -163,7 +164,7 @@ export default function Footer() {
                   <span className="w-10 h-10 bg-gold/20 rounded-lg flex items-center justify-center text-gold flex-shrink-0 mt-1">
                     📍
                   </span>
-                  <span className="font-medium"> القصيم - السعودية</span>
+                  <span className="font-medium">القصيم - السعودية</span>
                 </div>
               </div>
 
@@ -187,109 +188,141 @@ export default function Footer() {
                   </button>
                 </form>
                 {subscribed && (
-                  <p className="text-green-400 text-xs mt-2">✓ تم الاشتراك بنجاح!</p>
+                  <motion.p 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-green-400 text-xs mt-2"
+                  >
+                    ✓ تم الاشتراك بنجاح!
+                  </motion.p>
                 )}
               </div>
             </motion.div>
           </div>
-{/* Payment Methods - Simple Version */}
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true }}
-  className="mb-12 text-center"
->
-  <h3 className="text-lg font-bold text-gray-400 mb-6">
-    نقبل جميع طرق الدفع
-  </h3>
-  
-  <div className="flex flex-wrap justify-center items-center gap-6">
-    {/* الدفع عند الاستلام */}
-    <motion.div
-      whileHover={{ scale: 1.1 }}
-      className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/10 hover:border-gold transition-all"
-    >
-      <span className="text-2xl">📦</span>
-      <span className="text-white text-sm font-medium">الدفع عند الاستلام</span>
-    </motion.div>
 
-    {/* البطاقات البنكية */}
-    <motion.div
-      whileHover={{ scale: 1.1 }}
-      className="flex items-center gap-3 px-4 py-2 bg-white/10 rounded-lg border border-white/10 hover:border-gold transition-all"
-    >
-      <span className="text-2xl">💳</span>
-      <div className="flex gap-2 text-xs font-bold">
-        <span className="text-purple-400">PAYPAL</span>
-        <span className="text-white">|</span>
-        <span className="text-blue-400">VISA</span>
-        <span className="text-white">|</span>
-        <span className="text-orange-400">MC</span>
-      </div>
-    </motion.div>
+          {/* Payment Methods */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-12 text-center"
+          >
+            <h3 className="text-lg font-bold text-gray-400 mb-6">
+              نقبل جميع طرق الدفع
+            </h3>
+            
+            <div className="flex flex-wrap justify-center items-center gap-6">
+              {/* الدفع عند الاستلام */}
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/10 hover:border-gold transition-all"
+              >
+                <span className="text-2xl">📦</span>
+                <span className="text-white text-sm font-medium">الدفع عند الاستلام</span>
+              </motion.div>
 
-    {/* التحويل البنكي */}
-    <motion.div
-      whileHover={{ scale: 1.1 }}
-      className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/10 hover:border-gold transition-all"
-    >
-      <span className="text-2xl">🏦</span>
-      <span className="text-white text-sm font-medium">تحويل بنكي</span>
-    </motion.div>
+              {/* البطاقات البنكية */}
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                className="flex items-center gap-3 px-4 py-2 bg-white/10 rounded-lg border border-white/10 hover:border-gold transition-all"
+              >
+                <span className="text-2xl">💳</span>
+                <div className="flex gap-2 text-xs font-bold">
+                  <span className="text-purple-400">PAYPAL</span>
+                  <span className="text-white">|</span>
+                  <span className="text-blue-400">VISA</span>
+                  <span className="text-white">|</span>
+                  <span className="text-orange-400">MC</span>
+                </div>
+              </motion.div>
 
-    {/* المحافظ الإلكترونية */}
-    <motion.div
-      whileHover={{ scale: 1.1 }}
-      className="flex items-center gap-3 px-4 py-2 bg-white/10 rounded-lg border border-white/10 hover:border-gold transition-all"
-    >
-      <span className="text-2xl">📱</span>
-      <div className="flex gap-2 text-xs font-bold">
-        <span className="text-white">BARQ</span>
-                <span className="text-white">|</span>
+              {/* التحويل البنكي */}
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/10 hover:border-gold transition-all"
+              >
+                <span className="text-2xl">🏦</span>
+                <span className="text-white text-sm font-medium">تحويل بنكي</span>
+              </motion.div>
 
-        <span className="text-white">URPAY</span>
-                <span className="text-white">|</span>
+              {/* المحافظ الإلكترونية */}
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                className="flex items-center gap-3 px-4 py-2 bg-white/10 rounded-lg border border-white/10 hover:border-gold transition-all"
+              >
+                <span className="text-2xl">📱</span>
+                <div className="flex gap-2 text-xs font-bold">
+                  <span className="text-white">BARQ</span>
+                  <span className="text-white">|</span>
+                  <span className="text-white">URPAY</span>
+                  <span className="text-white">|</span>
+                  <span className="text-purple-400">STC pay</span>
+                </div>
+              </motion.div>
+            </div>
 
-        <span className="text-purple-400">STC pay</span>
-      </div>
-    </motion.div>
-
-    
-  </div>
-
-  {/* Security badge */}
-  <div className="mt-4 flex items-center justify-center gap-2 text-gray-500 text-xs">
-    <span className="text-green-500">🔒</span>
-    <span>معاملات آمنة ومشفرة SSL</span>
-  </div>
-</motion.div>
+            {/* Security badge */}
+            <div className="mt-4 flex items-center justify-center gap-2 text-gray-500 text-xs">
+              <span className="text-green-500">🔒</span>
+              <span>معاملات آمنة ومشفرة SSL</span>
+            </div>
+          </motion.div>
 
           {/* Bottom Bar */}
           <div className="pt-8 border-t border-white/10">
-            <div className="flex flex-wrap justify-between items-center gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
               {/* Copyright */}
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-sm text-center lg:text-right">
                 © {new Date().getFullYear()} تاب لينك SA. جميع الحقوق محفوظة
               </p>
 
-              {/* Legal Links */}
-              <div className="flex flex-wrap gap-4">
+              {/* Legal Links - محسّن */}
+              <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
                 {footerLinks.legal.map((link, index) => (
                   <Link
                     key={index}
                     href={link.href}
-                    className="text-gray-400 hover:text-gold transition-colors text-sm"
+                    className="text-gray-400 hover:text-gold transition-colors text-sm flex items-center gap-1 group"
                   >
+                    {link.icon && <span className="group-hover:scale-110 transition-transform">{link.icon}</span>}
                     {link.name}
                   </Link>
                 ))}
               </div>
 
               {/* Made with love */}
-              <p className="text-gray-500 text-sm">
-                صُنع بـ <span className="text-red-500">❤️</span> في السعودية
+              <p className="text-gray-500 text-sm text-center lg:text-left">
+                صُنع بـ <span className="text-red-500 animate-pulse">❤️</span> في السعودية
               </p>
             </div>
+
+            {/* Trust Badges */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="mt-8 flex flex-wrap justify-center items-center gap-4 text-xs text-gray-500"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>متجر معتمد</span>
+              </div>
+              <span className="text-gray-700">•</span>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-500">🛡️</span>
+                <span>حماية المشتري</span>
+              </div>
+              <span className="text-gray-700">•</span>
+              <div className="flex items-center gap-2">
+                <span className="text-gold">⭐</span>
+                <span>تقييم 4.8/5</span>
+              </div>
+              <span className="text-gray-700">•</span>
+              <div className="flex items-center gap-2">
+                <span className="text-purple-500">🚚</span>
+                <span>شحن سريع</span>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>
