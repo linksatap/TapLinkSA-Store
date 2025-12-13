@@ -377,23 +377,6 @@ export default function CheckoutForm({
       </div>
     </label>
 
-    {/* بطاقة مدى / Visa / Mastercard */}
-    <label className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-      paymentMethod === 'card'
-        ? 'border-gold bg-gold/5'
-        : 'border-gray-300 hover:border-gold/50'
-    }`}>
-      <input
-        type="radio"
-        name="payment"
-        value="card"
-        checked={paymentMethod === 'card'}
-        onChange={(e) => setPaymentMethod(e.target.value)}
-        className="w-5 h-5 mt-1"
-      />
-    
-    </label>
-
   </div>
 
   {/* ✅ ملاحظة عامة */}
