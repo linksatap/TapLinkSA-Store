@@ -1,5 +1,15 @@
+import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
+
+// ✅ إنشاء اتصال WooCommerce
+const WooCommerce = new WooCommerceRestApi({
+  url: process.env.NEXT_PUBLIC_WORDPRESS_URL,
+  consumerKey: process.env.WC_CONSUMER_KEY,
+  consumerSecret: process.env.WC_CONSUMER_SECRET,
+  version: 'wc/v3',
+});
+
 export default async function handler(req, res) {
-  // ✅ السماح فقط بـ POST
+  // السماح فقط بـ POST
   if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
@@ -25,93 +35,108 @@ export default async function handler(req, res) {
       });
     }
 
-    // ✅ كوبونات ثابتة (للاختبار)
-    const coupons = {
-      'جديد': {
-        code: 'جديد',
-        type: 'percent',
-        amount: 20,
-        minimum_amount: 0,
-        maximum_amount: null,
-        description: 'خصم 20% على جميع المنتجات',
-        free_shipping: false,
-      },
-      'SAVE50': {
-        code: 'SAVE50',
-        type: 'fixed',
-        amount: 50,
-        minimum_amount: 200,
-        maximum_amount: null,
-        description: 'خصم 50 ريال على طلبك',
-        free_shipping: false,
-      },
-      'FREESHIP': {
-        code: 'FREESHIP',
-        type: 'free_shipping',
-        amount: 0,
-        minimum_amount: 0,
-        maximum_amount: null,
-        description: 'شحن مجاني لطلبك',
-        free_shipping: true,
-      },
-      'VIP30': {
-        code: 'VIP30',
-        type: 'percent',
-        amount: 30,
-        minimum_amount: 500,
-        maximum_amount: 150,
-        description: 'خصم 30% (حد أقصى 150 ريال)',
-        free_shipping: false,
-      },
-    };
+    console.log('🔍 Searching for coupon:', code);
 
-    // البحث عن الكوبون
-    const upperCode = code.toUpperCase().trim();
-    const coupon = coupons[upperCode] || coupons[code];
+    // ✅ البحث عن الكوبون في WooCommerce
+    const response = await WooCommerce.get('coupons', {
+      code: code.toUpperCase(),
+      per_page: 1,
+    });
 
-    if (!coupon) {
+    const coupons = response.data;
+
+    if (!coupons || coupons.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'كود الكوبون غير صحيح',
       });
     }
 
-    // ✅ التحقق من الحد الأدنى
-    if (coupon.minimum_amount > 0 && subtotal < coupon.minimum_amount) {
+    const coupon = coupons[0];
+    console.log('✅ Coupon found:', coupon.code);
+
+    // ✅ التحقق من صلاحية الكوبون
+
+    // 1. التحقق من تاريخ الانتهاء
+    if (coupon.date_expires) {
+      const expiryDate = new Date(coupon.date_expires);
+      const now = new Date();
+      if (now > expiryDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'انتهت صلاحية هذا الكوبون',
+        });
+      }
+    }
+
+    // 2. التحقق من عدد مرات الاستخدام
+    if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
       return res.status(400).json({
         success: false,
-        message: `الحد الأدنى للطلب ${coupon.minimum_amount} ر.س`,
+        message: 'تم استخدام هذا الكوبون بالكامل',
+      });
+    }
+
+    // 3. التحقق من الحد الأدنى للطلب
+    const minAmount = parseFloat(coupon.minimum_amount || 0);
+    if (minAmount > 0 && subtotal < minAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `الحد الأدنى للطلب ${minAmount.toFixed(2)} ر.س`,
+      });
+    }
+
+    // 4. التحقق من الحد الأقصى للطلب
+    const maxAmount = parseFloat(coupon.maximum_amount || 0);
+    if (maxAmount > 0 && subtotal > maxAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `الحد الأقصى للطلب ${maxAmount.toFixed(2)} ر.س`,
       });
     }
 
     // ✅ حساب قيمة الخصم
     let discountAmount = 0;
 
-    if (coupon.type === 'percent') {
+    if (coupon.discount_type === 'percent') {
       // خصم نسبة مئوية
-      discountAmount = (subtotal * coupon.amount) / 100;
-
+      discountAmount = (subtotal * parseFloat(coupon.amount)) / 100;
+      
       // التحقق من الحد الأقصى للخصم
-      if (coupon.maximum_amount && discountAmount > coupon.maximum_amount) {
-        discountAmount = coupon.maximum_amount;
+      const maxDiscount = parseFloat(coupon.maximum_amount || 0);
+      if (maxDiscount > 0 && discountAmount > maxDiscount) {
+        discountAmount = maxDiscount;
       }
-    } else if (coupon.type === 'fixed') {
-      // خصم مبلغ ثابت
-      discountAmount = Math.min(coupon.amount, subtotal);
+    } else if (coupon.discount_type === 'fixed_cart') {
+      // خصم مبلغ ثابت على السلة
+      discountAmount = parseFloat(coupon.amount);
+      
+      // التأكد من عدم تجاوز قيمة السلة
+      if (discountAmount > subtotal) {
+        discountAmount = subtotal;
+      }
+    } else if (coupon.discount_type === 'fixed_product') {
+      // خصم على منتج محدد
+      discountAmount = parseFloat(coupon.amount);
     }
 
-    // ✅ إرجاع بيانات الكوبون
+    // ✅ إرجاع معلومات الكوبون
     return res.status(200).json({
       success: true,
       coupon: {
+        id: coupon.id,
         code: coupon.code,
-        type: coupon.type,
-        amount: coupon.amount,
+        type: coupon.discount_type,
+        amount: parseFloat(coupon.amount),
         discountAmount: parseFloat(discountAmount.toFixed(2)),
-        description: coupon.description,
-        free_shipping: coupon.free_shipping,
-        minimum_amount: coupon.minimum_amount,
-        maximum_amount: coupon.maximum_amount,
+        description: coupon.description || `خصم ${coupon.amount}${coupon.discount_type === 'percent' ? '%' : ' ر.س'}`,
+        free_shipping: coupon.free_shipping || false,
+        minimum_amount: parseFloat(coupon.minimum_amount || 0),
+        maximum_amount: parseFloat(coupon.maximum_amount || 0),
+        date_expires: coupon.date_expires,
+        usage_count: coupon.usage_count,
+        usage_limit: coupon.usage_limit,
+        individual_use: coupon.individual_use,
       },
       message: 'تم التحقق من الكوبون بنجاح',
     });
@@ -119,6 +144,24 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('❌ Coupon validation error:', error);
     
+    // التعامل مع أخطاء WooCommerce API
+    if (error.response) {
+      const status = error.response.status;
+      const message = error.response.data?.message || 'حدث خطأ في التحقق من الكوبون';
+      
+      if (status === 404) {
+        return res.status(404).json({
+          success: false,
+          message: 'كود الكوبون غير صحيح',
+        });
+      }
+      
+      return res.status(status).json({
+        success: false,
+        message: message,
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: 'حدث خطأ في التحقق من الكوبون',
