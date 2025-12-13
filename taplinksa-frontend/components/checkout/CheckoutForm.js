@@ -245,81 +245,179 @@ export default function CheckoutForm({
           ></textarea>
         </div>
       </div>
+{/* قسم طرق الدفع */}
+<div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+  <h2 className="text-2xl font-bold mb-6">طريقة الدفع</h2>
 
-      {/* قسم طرق الدفع */}
-      <h2 className="text-2xl font-bold mb-6">طريقة الدفع</h2>
+  <div className="space-y-4">
 
-      <div className="space-y-4 mb-8">
-
-        {/* الدفع عند الاستلام */}
-        <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-          paymentMethod === 'cod'
-            ? 'border-gold bg-gold/5'
-            : 'border-gray-300 hover:border-gold/50'
-        }`}>
-          <input
-            type="radio"
-            name="payment"
-            value="cod"
-            checked={paymentMethod === 'cod'}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-5 h-5"
-          />
-          <div>
-            <div className="font-bold">الدفع عند الاستلام</div>
-            <div className="text-sm text-gray-600">ادفع نقداً عند استلام الطلب</div>
-          </div>
-        </label>
-
-        {/* PayPal */}
-        <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-          paymentMethod === 'paypal'
-            ? 'border-gold bg-gold/5'
-            : 'border-gray-300 hover:border-gold/50'
-        }`}>
-          <input
-            type="radio"
-            name="payment"
-            value="paypal"
-            checked={paymentMethod === 'paypal'}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-5 h-5"
-          />
-          <div>
-            <div className="font-bold">PayPal</div>
-            <div className="text-sm text-gray-600">ادفع بأمان عبر PayPal</div>
-          </div>
-        </label>
-
-        {/* تحويل بنكي */}
-        <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-          paymentMethod === 'bank'
-            ? 'border-gold bg-gold/5'
-            : 'border-gray-300 hover:border-gold/50'
-        }`}>
-          <input
-            type="radio"
-            name="payment"
-            value="bank"
-            checked={paymentMethod === 'bank'}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-5 h-5"
-          />
-          <div className="flex-grow">
-            <div className="font-bold">تحويل بنكي</div>
-            <div className="text-sm text-gray-600">حوّل المبلغ لحسابنا البنكي</div>
-
-            {paymentMethod === 'bank' && (
-              <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
-                <div className="font-medium mb-2">معلومات الحساب البنكي:</div>
-                <div>اسم الحساب: مؤسسة تاب لينك</div>
-                <div>IBAN: SA00 0000 0000 0000 0000 0000</div>
-                <div>البنك: البنك الأهلي السعودي</div>
+    {/* الدفع عند الاستلام */}
+    <label className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+      paymentMethod === 'cod'
+        ? 'border-gold bg-gold/5'
+        : 'border-gray-300 hover:border-gold/50'
+    }`}>
+      <input
+        type="radio"
+        name="payment"
+        value="cod"
+        checked={paymentMethod === 'cod'}
+        onChange={(e) => setPaymentMethod(e.target.value)}
+        className="w-5 h-5 mt-1"
+      />
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-2xl">📦</span>
+          <span className="font-bold">الدفع عند الاستلام</span>
+          {/* ✅ Badge للرسوم */}
+          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">
+            +10 ر.س رسوم
+          </span>
+        </div>
+        <div className="text-sm text-gray-600">
+          ادفع نقداً أو ببطاقة مدى عند استلام الطلب
+        </div>
+        
+        {/* ✅ تنبيه رسوم COD */}
+        {paymentMethod === 'cod' && (
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+            <div className="flex items-start gap-2">
+              <span className="text-yellow-600">⚠️</span>
+              <div className="text-gray-700">
+                <strong>ملاحظة:</strong> سيتم إضافة رسوم 10 ريال للدفع عند الاستلام.
+                يمكنك تجنب هذه الرسوم بالدفع الإلكتروني.
               </div>
-            )}
+            </div>
           </div>
-        </label>
+        )}
       </div>
+    </label>
+
+    {/* PayPal */}
+    <label className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+      paymentMethod === 'paypal'
+        ? 'border-gold bg-gold/5'
+        : 'border-gray-300 hover:border-gold/50'
+    }`}>
+      <input
+        type="radio"
+        name="payment"
+        value="paypal"
+        checked={paymentMethod === 'paypal'}
+        onChange={(e) => setPaymentMethod(e.target.value)}
+        className="w-5 h-5 mt-1"
+      />
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-2xl">💳</span>
+          <span className="font-bold">PayPal</span>
+          {/* ✅ Badge مجاني */}
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+            مجاني
+          </span>
+        </div>
+        <div className="text-sm text-gray-600">
+          ادفع بأمان عبر PayPal أو بطاقة الائتمان
+        </div>
+      </div>
+    </label>
+
+    {/* تحويل بنكي */}
+    <label className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+      paymentMethod === 'bank'
+        ? 'border-gold bg-gold/5'
+        : 'border-gray-300 hover:border-gold/50'
+    }`}>
+      <input
+        type="radio"
+        name="payment"
+        value="bank"
+        checked={paymentMethod === 'bank'}
+        onChange={(e) => setPaymentMethod(e.target.value)}
+        className="w-5 h-5 mt-1"
+      />
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-2xl">🏦</span>
+          <span className="font-bold">تحويل بنكي</span>
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+            مجاني
+          </span>
+        </div>
+        <div className="text-sm text-gray-600">
+          حوّل المبلغ لحسابنا البنكي (سيتم شحن الطلب بعد تأكيد التحويل)
+        </div>
+
+        {/* ✅ تفاصيل الحساب البنكي */}
+        {paymentMethod === 'bank' && (
+          <div className="mt-3 p-4 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg text-sm">
+            <div className="font-bold text-dark mb-3 flex items-center gap-2">
+              <span>🏦</span>
+              معلومات الحساب البنكي
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">اسم الحساب:</span>
+                <span className="font-medium">مؤسسة تاب لينك</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">IBAN:</span>
+                <span className="font-mono font-medium">SA00 0000 0000 0000 0000 0000</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">البنك:</span>
+                <span className="font-medium">البنك الأهلي السعودي</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-300 text-xs text-gray-600">
+              💡 يرجى إرسال صورة الإيصال عبر واتساب: <a href="https://wa.me/966507004339" className="text-gold font-medium hover:underline">+966 507004339</a>
+            </div>
+          </div>
+        )}
+      </div>
+    </label>
+
+    {/* بطاقة مدى / Visa / Mastercard */}
+    <label className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+      paymentMethod === 'card'
+        ? 'border-gold bg-gold/5'
+        : 'border-gray-300 hover:border-gold/50'
+    }`}>
+      <input
+        type="radio"
+        name="payment"
+        value="card"
+        checked={paymentMethod === 'card'}
+        onChange={(e) => setPaymentMethod(e.target.value)}
+        className="w-5 h-5 mt-1"
+      />
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-2xl">💳</span>
+          <span className="font-bold">بطاقة مدى / فيزا / ماستركارد</span>
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+            مجاني
+          </span>
+        </div>
+        <div className="text-sm text-gray-600">
+          دفع آمن ومشفر بتقنية SSL
+        </div>
+      </div>
+    </label>
+
+  </div>
+
+  {/* ✅ ملاحظة عامة */}
+  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+    <div className="flex items-start gap-3">
+      <span className="text-blue-500 text-xl">ℹ️</span>
+      <div className="text-sm text-gray-700">
+        <strong className="text-dark">نصيحة:</strong> وفّر 10 ريال عن طريق الدفع الإلكتروني 
+        (PayPal، تحويل بنكي، أو بطاقة الائتمان) بدلاً من الدفع عند الاستلام.
+      </div>
+    </div>
+  </div>
+</div>
 
       {/* ملاحظة PayPal */}
       {paymentMethod === 'paypal' && (
