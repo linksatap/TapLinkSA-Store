@@ -356,10 +356,10 @@ export default function CheckoutForm({
               معلومات الحساب البنكي
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">اسم الحساب:</span>
+                {/*   <div className="flex justify-between">
+           <span className="text-gray-600">اسم الحساب:</span>
                 <span className="font-medium">مؤسسة تاب لينك</span>
-              </div>
+              </div>*/}
               <div className="flex justify-between">
                 <span className="text-gray-600">IBAN:</span>
                 <span className="font-mono font-medium">SA00 0000 0000 0000 0000 0000</span>
