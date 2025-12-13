@@ -48,10 +48,21 @@ export default function Checkout() {
     }
   }, [formData.postcode, cart]);
 
+  // ✅ حساب الإجماليات مع رسوم COD
   const subtotal = getCartTotal();
   const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
   const shippingCost = shippingInfo ? shippingInfo.cost : 0;
-  const finalTotal = subtotal - discount + shippingCost;
+  
+  // ✅ رسوم الدفع عند الاستلام
+  const codFee = paymentMethod === 'cod' ? 10 : 0;
+  
+  // ✅ حساب الإجمالي مع الضريبة
+  const subtotalAfterDiscount = subtotal - discount;
+  const subtotalWithFees = subtotalAfterDiscount + shippingCost + codFee;
+  const vat = subtotalWithFees * 0.15; // ضريبة 15%
+  const finalTotal = subtotalWithFees + vat;
+  
+  // تحويل للدولار (للPayPal)
   const SAR_TO_USD = 0.2667;
   const finalTotalUSD = (finalTotal * SAR_TO_USD).toFixed(2);
 
@@ -114,6 +125,14 @@ export default function Checkout() {
             coupon_lines: appliedCoupon
               ? [{ code: appliedCoupon.code }]
               : [],
+            // ✅ إضافة رسوم COD كـ Fee Line
+            fee_lines: codFee > 0 ? [
+              {
+                name: 'رسوم الدفع عند الاستلام',
+                total: codFee.toFixed(2),
+                tax_status: 'taxable'
+              }
+            ] : []
           }
         }),
       });
@@ -161,6 +180,9 @@ export default function Checkout() {
         items: cart,
         customer_id: user?.id || 0,
         coupon_code: appliedCoupon?.code || '',
+        cod_fee: codFee, // ✅ إضافة رسوم COD
+        vat, // ✅ إضافة الضريبة
+        finalTotal, // ✅ الإجمالي النهائي
       };
 
       const result = await sendOrderToWooCommerce(orderData);
@@ -179,30 +201,59 @@ export default function Checkout() {
     }
   };
 
+  // ✅ التحقق من وجود منتجات في السلة
+  if (cart.length === 0) {
+    return (
+      <Layout title="السلة فارغة | تاب لينك السعودية">
+        <div className="container-custom section-padding">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-20"
+          >
+            <div className="text-6xl mb-6">🛒</div>
+            <h2 className="text-3xl font-bold mb-4">سلة التسوق فارغة</h2>
+            <p className="text-gray-600 mb-8">لا توجد منتجات في سلتك حالياً</p>
+            <Link
+              href="/shop"
+              className="inline-block bg-gold text-dark font-bold px-8 py-3 rounded-xl hover:bg-yellow-500 transition-all"
+            >
+              تصفح المنتجات
+            </Link>
+          </motion.div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout title="إتمام الطلب | تاب لينك السعودية">
       <div className="container-custom section-padding">
 
         {/* المسار العلوي */}
         <nav className="mb-8 text-sm">
-          <ol className="flex items-center gap-2">
-            <li><Link href="/" className="text-gray-600 hover:text-gold">الرئيسية</Link></li>
+          <ol className="flex items-center gap-2 flex-wrap">
+            <li><Link href="/" className="text-gray-600 hover:text-gold transition-colors">الرئيسية</Link></li>
             <li className="text-gray-400">/</li>
-            <li><Link href="/shop" className="text-gray-600 hover:text-gold">المتجر</Link></li>
+            <li><Link href="/shop" className="text-gray-600 hover:text-gold transition-colors">المتجر</Link></li>
             <li className="text-gray-400">/</li>
-            <li><Link href="/cart" className="text-gray-600 hover:text-gold">السلة</Link></li>
+            <li><Link href="/cart" className="text-gray-600 hover:text-gold transition-colors">السلة</Link></li>
             <li className="text-gray-400">/</li>
             <li className="text-gold font-bold">الدفع</li>
           </ol>
         </nav>
 
         {/* العنوان */}
-        <div className="text-center mb-12">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
           <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4">
             إتمام الطلب
           </h1>
           <div className="w-24 h-1 bg-gold mx-auto"></div>
-        </div>
+        </motion.div>
 
         {/* رسالة تسجيل الدخول */}
         {user ? (
@@ -211,8 +262,11 @@ export default function Checkout() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl"
           >
-            <p className="text-green-800">
-              ✅ مرحباً <strong>{user.name}</strong>! بياناتك محفوظة وسيتم ربط الطلب بحسابك تلقائياً.
+            <p className="text-green-800 flex items-center gap-2">
+              <span className="text-2xl">✅</span>
+              <span>
+                مرحباً <strong>{user.name}</strong>! بياناتك محفوظة وسيتم ربط الطلب بحسابك تلقائياً.
+              </span>
             </p>
           </motion.div>
         ) : (
@@ -221,12 +275,18 @@ export default function Checkout() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl"
           >
-            <p className="text-blue-800">
-              💡 لديك حساب؟{' '}
-              <Link href={`/login?redirect=/checkout`} className="text-blue-600 font-bold underline">
-                سجل دخولك
-              </Link>{' '}
-              لحفظ الطلب في حسابك وتتبعه لاحقاً.
+            <p className="text-blue-800 flex items-start gap-2">
+              <span className="text-2xl">💡</span>
+              <span>
+                لديك حساب؟{' '}
+                <Link 
+                  href={`/login?redirect=/checkout`} 
+                  className="text-blue-600 font-bold underline hover:text-blue-800 transition-colors"
+                >
+                  سجل دخولك
+                </Link>{' '}
+                لحفظ الطلب في حسابك وتتبعه لاحقاً.
+              </span>
             </p>
           </motion.div>
         )}
@@ -248,6 +308,7 @@ export default function Checkout() {
               finalTotalUSD={finalTotalUSD}
               user={user}
               cart={cart}
+              codFee={codFee} // ✅ تمرير رسوم COD
             />
 
             {/* إدخال الكوبون */}
@@ -268,10 +329,49 @@ export default function Checkout() {
               finalTotalUSD={finalTotalUSD}
               appliedCoupon={appliedCoupon}
               paymentMethod={paymentMethod}
+              codFee={codFee} // ✅ تمرير رسوم COD
+              vat={vat} // ✅ تمرير الضريبة
             />
           </div>
 
         </div>
+
+        {/* ✅ Security Notice */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-12 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6"
+        >
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">🔒</span>
+              <div>
+                <h3 className="font-bold text-lg mb-1">معاملات آمنة ومشفرة</h3>
+                <p className="text-sm text-gray-600">
+                  جميع معلوماتك محمية بتقنية SSL والتشفير من طرف إلى طرف
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>دفع آمن</span>
+              </div>
+              <span>•</span>
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>حماية البيانات</span>
+              </div>
+              <span>•</span>
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>خصوصية مضمونة</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
       </div>
     </Layout>
   );
