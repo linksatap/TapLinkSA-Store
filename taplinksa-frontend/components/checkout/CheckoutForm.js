@@ -366,7 +366,7 @@ export default function CheckoutForm({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">البنك:</span>
-                <span className="font-medium">البنك الأهلي السعودي</span>
+                <span className="font-medium">البنك الراجحي السعودي</span>
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-gray-300 text-xs text-gray-600">
