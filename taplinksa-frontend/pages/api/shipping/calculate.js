@@ -170,7 +170,7 @@ export default async function handler(req, res) {
     }
 
     // شحن مجاني للطلبات فوق 500 ر.س
-    const freeShippingThreshold = 500;
+    const freeShippingThreshold = 199;
     if (subtotal >= freeShippingThreshold && shippingInfo.cost > 0) {
       shippingInfo.originalCost = shippingInfo.cost;
       shippingInfo.cost = 0;
