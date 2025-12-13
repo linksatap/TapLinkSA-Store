@@ -59,8 +59,8 @@ export default function Checkout() {
   // ✅ حساب الإجمالي مع الضريبة
   const subtotalAfterDiscount = subtotal - discount;
   const subtotalWithFees = subtotalAfterDiscount + shippingCost + codFee;
- // const vat = subtotalWithFees * 0.15; // ضريبة 15%
-  const finalTotal = subtotalWithFees ;//+vat
+  const vat = subtotalWithFees * 0.15; // ضريبة 15%
+  const finalTotal = subtotalWithFees + vat;
   
   // تحويل للدولار (للPayPal)
   const SAR_TO_USD = 0.2667;
