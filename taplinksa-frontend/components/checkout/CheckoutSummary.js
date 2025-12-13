@@ -124,12 +124,12 @@ export default function CheckoutSummary({
         </AnimatePresence>
 
         {/* ضريبة القيمة المضافة (15%) */}
-        <div className="flex justify-between text-gray-600">
+       {/* <div className="flex justify-between text-gray-600">
           <span>ضريبة القيمة المضافة (15%)</span>
           <span className="font-bold">
             {((subtotal - discount + shippingCost + codFee) * 0.15).toFixed(2)} ر.س
           </span>
-        </div>
+        </div>*/}
 
         {/* المجموع الكلي */}
         <div className="border-t-2 pt-4 flex justify-between text-xl font-bold">
