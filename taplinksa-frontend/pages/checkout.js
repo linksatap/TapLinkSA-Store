@@ -48,19 +48,22 @@ export default function Checkout() {
     }
   }, [formData.postcode, cart]);
 
-  // ✅ حساب الإجماليات مع رسوم COD
+  // ✅ حساب الإجماليات بشكل صحيح
   const subtotal = getCartTotal();
-  const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  
+  // ✅ قيمة الخصم من الكوبون
+  const discount = appliedCoupon?.discountAmount || 0;
+  
   const shippingCost = shippingInfo ? shippingInfo.cost : 0;
   
   // ✅ رسوم الدفع عند الاستلام
   const codFee = paymentMethod === 'cod' ? 10 : 0;
   
-  // ✅ حساب الإجمالي مع الضريبة
+  // ✅ حساب الإجمالي بعد الخصم (بدون ضريبة)
   const subtotalAfterDiscount = subtotal - discount;
   const subtotalWithFees = subtotalAfterDiscount + shippingCost + codFee;
-  const vat = subtotalWithFees ; // ضريبة 15%
-  const finalTotal = subtotalWithFees ;
+  const vat = 0; // الضريبة معطلة
+  const finalTotal = subtotalWithFees + vat;
   
   // تحويل للدولار (للPayPal)
   const SAR_TO_USD = 0.2667;
@@ -69,6 +72,7 @@ export default function Checkout() {
   // تطبيق الكوبون
   const handleApplyCoupon = (coupon) => {
     setAppliedCoupon(coupon);
+    console.log('✅ Coupon applied:', coupon);
   };
 
   // حساب الشحن
@@ -92,7 +96,7 @@ export default function Checkout() {
         body: JSON.stringify({
           postcode: formData.postcode,
           items,
-          subtotal
+          subtotal: subtotalAfterDiscount // ✅ استخدام المجموع بعد الخصم
         }),
       });
 
@@ -122,17 +126,17 @@ export default function Checkout() {
           orderData: {
             ...orderData,
             customer_id: user?.id || 0,
-            coupon_lines: appliedCoupon
-              ? [{ code: appliedCoupon.code }]
-              : [],
+            // ✅ إضافة الكوبون
+            coupon_lines: appliedCoupon ? [{
+              code: appliedCoupon.code,
+              discount: discount.toFixed(2)
+            }] : [],
             // ✅ إضافة رسوم COD كـ Fee Line
-            fee_lines: codFee > 0 ? [
-              {
-                name: 'رسوم الدفع عند الاستلام',
-                total: codFee.toFixed(2),
-                tax_status: 'taxable'
-              }
-            ] : []
+            fee_lines: codFee > 0 ? [{
+              name: 'رسوم الدفع عند الاستلام',
+              total: codFee.toFixed(2),
+              tax_status: 'none'
+            }] : []
           }
         }),
       });
@@ -140,14 +144,13 @@ export default function Checkout() {
       const result = await response.json();
 
       if (result.success) {
-        console.log('Order created in WooCommerce:', result.orderId);
+        console.log('✅ Order created in WooCommerce:', result.orderId);
         return result;
       } else {
         throw new Error(result.message);
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('تم إرسال الطلب عبر واتساب، لكن حدث خطأ في حفظ الطلب في النظام');
+      console.error('❌ Error:', error);
       return null;
     }
   };
@@ -176,14 +179,18 @@ export default function Checkout() {
         address: formData.address,
         notes: formData.notes,
         paymentMethod,
-        paid: paymentMethod === 'paid',
+        paid: false,
         items: cart,
         customer_id: user?.id || 0,
         coupon_code: appliedCoupon?.code || '',
-        cod_fee: codFee, // ✅ إضافة رسوم COD
-        vat, // ✅ إضافة الضريبة
+        discount: discount, // ✅ قيمة الخصم
+        cod_fee: codFee, // ✅ رسوم COD
+        shipping: shippingCost, // ✅ رسوم الشحن
+        vat, // ✅ الضريبة (0)
         finalTotal, // ✅ الإجمالي النهائي
       };
+
+      console.log('📦 Order Data:', orderData);
 
       const result = await sendOrderToWooCommerce(orderData);
       clearCart();
@@ -194,7 +201,7 @@ export default function Checkout() {
         router.push(`/thank-you?payment=${paymentMethod}`);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error:', error);
       alert('حدث خطأ أثناء معالجة الطلب');
     } finally {
       setLoading(false);
@@ -323,14 +330,13 @@ export default function Checkout() {
             <CheckoutSummary
               cart={cart}
               subtotal={subtotal}
-              discount={discount}
+              discount={discount} // ✅ تمرير قيمة الخصم
               shippingInfo={shippingInfo}
               finalTotal={finalTotal}
               finalTotalUSD={finalTotalUSD}
               appliedCoupon={appliedCoupon}
               paymentMethod={paymentMethod}
               codFee={codFee} // ✅ تمرير رسوم COD
-              vat={vat} // ✅ تمرير الضريبة
             />
           </div>
 
