@@ -391,18 +391,7 @@ export default function CheckoutForm({
         onChange={(e) => setPaymentMethod(e.target.value)}
         className="w-5 h-5 mt-1"
       />
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-2xl">💳</span>
-          <span className="font-bold">بطاقة مدى / فيزا / ماستركارد</span>
-          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-            مجاني
-          </span>
-        </div>
-        <div className="text-sm text-gray-600">
-          دفع آمن ومشفر بتقنية SSL
-        </div>
-      </div>
+    
     </label>
 
   </div>
