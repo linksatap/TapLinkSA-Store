@@ -161,7 +161,7 @@ export default function Cart() {
                 </div>
                 <div className="border-t pt-4 flex justify-between text-xl font-bold">
                   <span>المجموع الكلي</span>
-                  <span className="text-gold">{(total * 1.15).toFixed(2)} ر.س</span>
+                  <span className="text-gold">{(total ).toFixed(2)} ر.س</span>
                 </div>
               </div>
 
